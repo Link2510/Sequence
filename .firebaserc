@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "sequence-23c7f"
-  }
+  },
+  "targets": {
+    "sequence-23c7f": {
+      "hosting": {
+        "sequenceace": [
+          "sequenceace"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
