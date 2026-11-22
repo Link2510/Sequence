@@ -45,6 +45,7 @@ main:has(.ld)>h1{display:none}
 @keyframes sh{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .rr{display:flex;gap:8px}.rr button{margin:4px 0 0;padding:0 14px;font-size:20px}
 .hn{margin:0;font-size:13px}
+.eh{display:block;color:#d63a3a;font-size:13px;font-weight:500;margin-top:4px}.eh:empty{display:none}
 .rh{display:flex;justify-content:space-between;align-items:baseline;margin-top:4px}
 .rls{display:grid;gap:8px}
 .rm{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--bd);border-left:5px solid var(--tc,var(--bd));border-radius:14px;background:var(--c);cursor:pointer}
@@ -143,7 +144,8 @@ function seqs(s,t,last){let g=0,cl=[];for(const[dr,dc]of[[0,1],[1,0],[1,1],[1,-1
 const draw=(s,h)=>{if(!s.dk.length&&s.dc.length){s.dk=shuf(s.dc);s.dc=[]}if(s.dk.length)h.push(s.dk.pop())};
 const pos=i=>"hàng "+((i/10|0)+1)+", cột "+(i%10+1);
 const hist=(s,x,t,i=-1)=>{s.hs.push(t+"|"+i+"|"+x);if(s.hs.length>40)s.hs.splice(0,s.hs.length-40)};
-const join=s=>{if(!s)return fresh([{n:me,t:0}]);if(s.pl.some(p=>p.n==me)||s.st||s.pl.length>=12)return;s.pl.push({n:me,t:nt(s)});return s};
+const isAiName=n=>/^ai\d*$/.test(String(n).toLowerCase().replace(/[\s.\-_]/g,""));
+const join=s=>{if(isAiName(me))return;if(!s)return fresh([{n:me,t:0}]);if(s.pl.some(p=>p.n==me)||s.st||s.pl.length>=12)return;s.pl.push({n:me,t:nt(s)});return s};
 const start=s=>{if(!s||s.st||s.pl[0].n!=me||!ok(s))return;{const o=s.pl[0],G=[];for(let k=0;k<s.tn;k++)G.push(s.pl.filter(p=>p.t==(o.t+k)%s.tn));const q=[];for(let i=0;i<14;i++)G.forEach(g=>{if(g[i])q.push(g[i])});s.pl=q}const n=s.pl.length;let d=[];for(let k=0;k<2;k++)d.push(...CARDS,"J♦","J♣","J♥","J♠");s.dk=shuf(d);const m=HS(n);s.h=s.pl.map(()=>s.dk.splice(0,m));s.sn=0;s.se="";s.dc=[];s.st=1;s.tu=Math.random()*n|0;s.gid=Math.random().toString(36).slice(2,8);s.w=-1;s.sc=[0,0,0];s.sw=0;s.lg="Bắt đầu!";s.hs=["-1|-1|Bắt đầu ván"];s.lm=-1;return s};
 const kick=(s,n)=>{if(!s||s.st||s.pl[0].n!=me)return;const i=s.pl.findIndex(p=>p.n==n);if(i<1)return;s.pl.splice(i,1);return s};
 const delRoom=s=>s&&s.pl[0].n==me?null:undefined;
@@ -159,7 +161,7 @@ const ok=s=>{for(let k=0;k<s.tn;k++)if(!s.pl.some(p=>p.t==k))return 0;return s.p
 const setTn=s=>{if(!s||s.st||s.pl[0].n!=me)return;s.tn=s.tn==3?2:3;if(s.tn==3){const u=[0,1,2].filter(c=>!s.cl.slice(0,2).includes(c));s.cl=[s.cl[0],s.cl[1],u[0]]}else s.cl=s.cl.slice(0,2);s.pl.filter(p=>p.t>=s.tn).forEach(p=>p.t=nt(s));return s};
 const flip=(s,n)=>{if(!s||s.st||s.pl[0].n!=me)return;const p=s.pl.find(p=>p.n==n);if(!p)return;p.t=(p.t+1)%s.tn;return s};
 const setCol=(s,k)=>{if(!s||s.st||k>=s.tn)return;const m=s.pl.find(p=>p.n==me);if(!m||(m.t!=k&&s.pl[0].n!=me))return;const used=s.cl.slice(0,s.tn).filter((_,i)=>i!=k);let c=s.cl[k];do{c=(c+1)%3}while(used.includes(c));s.cl[k]=c;return s};
-const addBot=s=>{if(!s||s.st||s.pl[0].n!=me||s.pl.length>=12)return;let k=1;while(s.pl.some(p=>p.n=="AI "+k))k++;s.pl.push({n:"AI "+k,t:nt(s),bot:1});return s};
+const addBot=s=>{if(!s||s.st||s.pl[0].n!=me||s.pl.length>=12)return;let k=1;while(s.pl.some(p=>p.n=="🤖 AI "+k))k++;s.pl.push({n:"🤖 AI "+k,t:nt(s),bot:1});return s};
 const delBot=s=>{if(!s||s.st||s.pl[0].n!=me)return;for(let i=s.pl.length-1;i>0;i--)if(s.pl[i].bot){s.pl.splice(i,1);return s}};
 const solo=s=>{if(!s||s.st||s.pl[0].n!=me)return;while(!ok(s))if(!addBot(s))break;return start(s)};
 const W=[0,1,3,10,40,600];
@@ -210,22 +212,22 @@ warn:"<svg viewBox='0 0 48 48'><path d='M24 7 43 40H5z'/><path d='M24 20v10'/><c
 const note=(ic,tone,ti,tx,bs)=>"<div class='nt'><div class='ni "+tone+"'>"+ic+"</div><h2>"+ti+"</h2><p class='mu'>"+tx+"</p><div class='nb'>"+(bs||"")+"</div></div>";
 const BK="<button class='p' id='bk'>Về màn hình đầu</button>";
 const bindBk=()=>{const b=$("bk");if(b)b.onclick=()=>location.reload()};
-function winBox(mi){const n=TNs(S)[S.w],mem=S.pl.filter(p=>p.t==S.w).map(p=>esc(p.n)+(p.bot?" (AI)":"")).join(", "),mine=S.pl[mi].t==S.w,col=(S.cl||[0,1,2]).map(c=>PC[c]);
+function winBox(mi){const n=TNs(S)[S.w],mem=S.pl.filter(p=>p.t==S.w).map(p=>esc(p.n)).join(", "),mine=S.pl[mi].t==S.w,col=(S.cl||[0,1,2]).map(c=>PC[c]);
 let cf="";for(let i=0;i<40;i++)cf+="<span class='cf' style='left:"+(Math.random()*100)+"%;background:"+["#ffd54a","#ff4fa3","#19e3ff",col[S.w],"#fff"][i%5]+";animation-duration:"+(2.5+Math.random()*2.5)+"s;animation-delay:"+(Math.random()*1.2)+"s'></span>";
 return cf+"<div id='wn'><div class='bx'><div style='font-size:48px'>🏆</div><h2 class='t"+S.w+"'>Đội "+n+" thắng!</h2><div>"+mem+"</div><p class='mu'>"+(mine?"Chúc mừng, đội của bạn đã chiến thắng!":"Chúc bạn may mắn ở ván sau!")+"</p><div>"+TNs(S).map((x,k)=>"<b class='t"+k+"'>"+x+" "+S.sc[k]+"</b>").join(" · ")+"</div><div class='wb'><button id='wc'>Xem bàn cờ</button>"+(mi==0?"<button class='p' id='wa'>Ván mới</button>":"")+"</div></div></div>"}
 function roll(){animOn=1;turnAlert(0);const a=$("app"),L=S.pl,f=S.tu,len=L.length,N=len*(len<=4?4:len<=8?2:1)+f;
 a.innerHTML="<div style='text-align:center;padding:36px 0'><div class='mu'>Đang chọn người đánh đầu tiên…</div><div id='ro' style='font-size:34px;font-weight:700;margin:22px 0;min-height:48px;transition:transform .3s'></div><div id='rt' class='mu'></div></div>";
 const show=k=>{const q=L[k%len];$("ro").innerHTML="<span class='t"+q.t+"'>"+esc(q.n)+"</span>";$("rt").textContent="Đội "+TNs(S)[q.t]};
 const step=k=>{show(k);if(k<N)setTimeout(()=>step(k+1),70+Math.pow(k/N,3)*380);else{$("ro").style.transform="scale(1.25)";$("rt").textContent="Đội "+TNs(S)[L[f].t]+" đánh đầu tiên!";setTimeout(()=>{animOn=0;R()},1400)}};step(0)}
-function R(){const a=$("app");if(!S||!me)return;{const st=document.documentElement.style;(S.cl||[0,1,2]).forEach((c,k)=>st.setProperty("--k"+k,PC[c]))}if(animOn)return;const mi=S.pl.findIndex(p=>p.n==me);
-if(mi<0){if(inRoom&&!S.st){a.innerHTML=note(IC.door,"w","Bạn đã bị mời ra khỏi phòng","Chủ phòng đã xóa bạn khỏi phòng <b>"+esc(code)+"</b>. Bạn có thể chọn một phòng khác.",BK);bindBk();return}
+function R(){const a=$("app");if(!S||!me)return;{const st=document.documentElement.style;(S.cl||[0,1,2]).forEach((c,k)=>st.setProperty("--k"+k,PC[c]))}if(animOn)return;const mi=S.pl.findIndex(p=>p.n==me&&!p.bot);
+if(mi<0){if(!inRoom&&S.pl.some(p=>p.n==me&&p.bot)){a.innerHTML=note(IC.warn,"w","Tên này dành cho AI","Hãy quay lại và đặt một tên khác để vào phòng.",BK);bindBk();return}if(inRoom&&!S.st){a.innerHTML=note(IC.door,"w","Bạn đã bị mời ra khỏi phòng","Chủ phòng đã xóa bạn khỏi phòng <b>"+esc(code)+"</b>. Bạn có thể chọn một phòng khác.",BK);bindBk();return}
 if(!inRoom&&!S.st&&S.pl.length<12){a.innerHTML=note(IC.sp,"","Đang vào phòng…","Phòng <b>"+esc(code)+"</b>","");return}
 a.innerHTML=S.st?note(IC.cards,"w","Ván đã bắt đầu","Phòng <b>"+esc(code)+"</b> đang chơi dở và không nhận thêm người. Nếu bạn là người trong ván, hãy quay lại và nhập đúng tên đã dùng. Nếu không, hãy chọn phòng khác.",BK):note(IC.users,"w","Phòng đã đầy","Phòng <b>"+esc(code)+"</b> đã có đủ 12 người. Hãy chọn một phòng khác.",BK);bindBk();return}inRoom=1;if(S.st&&S.gid&&S.gid!=seenG){seenG=S.gid;if(S.hs.length<=1){roll();return}}
 const owner=mi==0;
 if(!S.st){turnAlert(0);const TT=TNs(S),bad=!ok(S),inv=S.pl.length<2,sz=TT.map((_,k)=>S.pl.filter(p=>p.t==k).length),rule=sz.every(x=>x==sz[0])&&[2,3,4,6,8,9,10,12].includes(S.pl.length),wh=rule||bad?"":"<p class='warn'>⚠️ Chưa theo luật chuẩn: các đội phải bằng số người và tổng số người là 2, 3, 4, 6, 8, 9, 10 hoặc 12. Bạn vẫn có thể bắt đầu.</p>";
 let h="<div class='lb'><div class='lh'><div><div class='mu'>Mã phòng</div><div class='code'>"+esc(code.toUpperCase())+"</div></div><button id='cp'>Sao chép mã</button></div>";
 h+="<div class='sg'><span class='mu'>Số đội</span><div class='seg'>"+[2,3].map(n=>"<button data-tn='"+n+"' class='"+(S.tn==n?"on":"")+"'"+(owner?"":" disabled")+">"+n+" đội</button>").join("")+"</div><span class='mu'>mỗi đội cần "+(S.tn==3?1:2)+" sequence để thắng · mỗi người chia "+HS(S.pl.length)+" lá</span></div>";
-h+="<div class='tms' style='grid-template-columns:repeat("+S.tn+",1fr)'>"+TT.map((nm,k)=>{const L=S.pl.map((p,i)=>({p,i})).filter(x=>x.p.t==k);return"<div class='tm tb"+k+"'><div class='th t"+k+"'><b>"+nm+"</b>"+(owner||S.pl[mi].t==k?"<button class='sw' data-col='"+k+"' title='Đổi màu đội'>🎨 Đổi màu</button>":"")+"<span>"+L.length+"</span></div>"+(L.length?L.map(({p,i})=>"<div class='pc'><span class='av a"+k+"'>"+esc((p.n[0]||"?").toUpperCase())+"</span><span class='pn'>"+esc(p.n)+(i==0?" <small>👑</small>":"")+(p.bot?" <small class='bg'>AI</small>":"")+(p.n==me?" <small class='bg'>bạn</small>":"")+"</span>"+(owner?"<span class='ac'><button data-tm='"+esc(p.n)+"' title='Đổi đội'>⇄</button>"+(i>0?"<button data-kick='"+esc(p.n)+"' title='Xóa'>✕</button>":"")+"</span>":"")+"</div>").join(""):"<div class='pe'>Chưa có ai</div>")+"</div>"}).join("")+"</div>";
+h+="<div class='tms' style='grid-template-columns:repeat("+S.tn+",1fr)'>"+TT.map((nm,k)=>{const L=S.pl.map((p,i)=>({p,i})).filter(x=>x.p.t==k);return"<div class='tm tb"+k+"'><div class='th t"+k+"'><b>"+nm+"</b>"+(owner||S.pl[mi].t==k?"<button class='sw' data-col='"+k+"' title='Đổi màu đội'>🎨 Đổi màu</button>":"")+"<span>"+L.length+"</span></div>"+(L.length?L.map(({p,i})=>"<div class='pc'><span class='av a"+k+"'>"+(p.bot?"AI":esc((Array.from(p.n)[0]||"?").toUpperCase()))+"</span><span class='pn'>"+esc(p.n)+(i==0?" <small>👑</small>":"")+(p.n==me?" <small class='bg'>bạn</small>":"")+"</span>"+(owner?"<span class='ac'><button data-tm='"+esc(p.n)+"' title='Đổi đội'>⇄</button>"+(i>0?"<button data-kick='"+esc(p.n)+"' title='Xóa'>✕</button>":"")+"</span>":"")+"</div>").join(""):"<div class='pe'>Chưa có ai</div>")+"</div>"}).join("")+"</div>";
 h+="<div class='ft'>";
 if(owner)h+="<div class='ow'>"+(inv?"<button id='so'>Chơi thử với AI</button>":"")+"<button id='ab' "+(S.pl.length>=12?"disabled":"")+">＋ Thêm AI</button>"+(S.pl.some(p=>p.bot)?"<button id='rb'>− Bớt AI</button>":"")+"<button id='dr' class='dg'>Xóa phòng</button></div>"+(bad?"<p class='mu'>Cần ít nhất 1 người mỗi đội để bắt đầu.</p>":wh)+"<button class='p big' id='go' "+(bad?"disabled":"")+">Bắt đầu ("+S.pl.length+" người)</button>";
 else h+=wh+"<p class='mu wt'>Chờ chủ phòng bắt đầu<span class='dots'></span></p>";
@@ -252,7 +254,8 @@ if($("dd"))$("dd").onclick=()=>{const cc=c;sel=null;tx(s=>play(s,{k:"d",c:cc}))}
 if($("ag"))$("ag").onclick=()=>{if(S.w<0&&!confirm("Bỏ ván đang chơi và quay về phòng chờ?"))return;sel=null;tx(again)};if($("dr"))$("dr").onclick=()=>{if(confirm("Xóa phòng "+code+" và đuổi mọi người ra?"))tx(delRoom)};
 a.querySelectorAll("[data-h]").forEach(b=>{const i=+b.dataset.h;if(i>=0)b.onclick=()=>{fl=i;R();const e=document.querySelector("[data-i='"+i+"']");if(e)e.scrollIntoView({block:"center",behavior:"smooth"});setTimeout(()=>{if(fl==i){fl=-1;R()}},2600)}});
 if($("sn"))$("sn").onchange=e=>{snd=e.target.checked;try{localStorage.setItem("sqs",snd?"1":"0")}catch(x){}};if($("wc"))$("wc").onclick=()=>{winSeen=S.gid||"x";R()};if($("wa"))$("wa").onclick=()=>{winSeen="";tx(again)};botTick()}
-function enter(){me=$("nm").value.replace(/[<>&"]/g,"").trim().slice(0,14);code=$("rc").value.toLowerCase().replace(/[^a-z0-9_-]/g,"").slice(0,20);if(!me||!code){const f=$(me?"rc":"nm");f.classList.add("err");f.focus();return}
+function enter(){me=$("nm").value.replace(/[<>&"]|🤖/gu,"").trim().slice(0,14);code=$("rc").value.toLowerCase().replace(/[^a-z0-9_-]/g,"").slice(0,20);if(!me||!code){const f=$(me?"rc":"nm");f.classList.add("err");f.focus();return}
+if(isAiName(me)){$("nm").classList.add("err");$("ne").textContent="Tên này dành cho AI, hãy đặt tên khác nhé.";$("nm").focus();return}
 try{localStorage.setItem("sq",JSON.stringify([me,code]))}catch(e){}
 if(unl)unl();$("app").innerHTML=note(IC.sp,"","Đang vào phòng…","Phòng <b>"+esc(code)+"</b>","");
 onValue(ref(db,"rooms/"+code),snap=>{const v=snap.val();S=v?dec(v):null;if(S)seen=1;else if(seen){seen=0;$("app").innerHTML=note(IC.trash,"b","Phòng đã đóng","Phòng đã bị chủ phòng xóa, hoặc đã tự xóa sau 30 phút không có hoạt động.",BK);bindBk();return}R()},e=>{$("app").innerHTML=note(IC.warn,"b","Không đọc được dữ liệu phòng",esc(e.message),"<button class='p' id='bk'>Thử lại</button>");bindBk()});
@@ -260,13 +263,13 @@ tx(join)}
 let sv=[];try{sv=JSON.parse(localStorage.getItem("sq"))||[]}catch(e){}
 const fcs=["J♦","K♠","A♥"].map((c,i)=>"<div class='fc f"+i+"'>"+cardSvg(c)+"</div>").join("");
 $("app").innerHTML="<div class='ld'><div class='hero'><div class='fan'>"+fcs+"</div><h1 class='lt'>Sequence</h1><p class='ls'>Bài và quân cờ cho 2 đến 12 người, chơi cùng bạn bè ngay trên điện thoại</p></div>"
-+"<div class='fm'><label>Tên của bạn<input id='nm' maxlength='14' placeholder='Ví dụ: Lan' value='"+esc(sv[0]||"")+"' autocomplete='nickname'></label>"
++"<div class='fm'><label>Tên của bạn<input id='nm' maxlength='14' placeholder='Ví dụ: Lan' value='"+esc(sv[0]||"")+"' autocomplete='nickname'><span class='eh' id='ne'></span></label>"
 +"<label>Mã phòng<span class='rr'><input id='rc' maxlength='20' placeholder='Ví dụ: ban' value='"+esc(sv[1]||"")+"' autocapitalize='none' autocomplete='off'><button type='button' id='rnd' title='Tạo mã ngẫu nhiên'>🎲</button></span></label>"
 +"<button class='p big' id='jb'>Vào phòng</button><p class='mu hn'>Mã phòng chưa có thì sẽ được tạo mới, người vào đầu tiên là chủ phòng. Muốn vào lại giữa ván, nhập đúng tên cũ.</p></div>"
 +"<div class='rh'><b>Phòng đang mở</b><span class='mu'>bấm để chọn</span></div><div id='rl' class='rls'><div class='mu'>Đang tải…</div></div></div>";
 $("jb").onclick=enter;
 $("rnd").onclick=()=>{$("rc").value=Array.from({length:5},()=>"abcdefghjkmnpqrstuvwxyz"[Math.random()*23|0]).join("");$("rc").classList.remove("err");$("rc").focus()};
-["nm","rc"].forEach(id=>{$(id).addEventListener("keydown",e=>{if(e.key=="Enter")enter()});$(id).addEventListener("input",()=>$(id).classList.remove("err"))});
+["nm","rc"].forEach(id=>{$(id).addEventListener("keydown",e=>{if(e.key=="Enter")enter()});$(id).addEventListener("input",()=>{$(id).classList.remove("err");if($("ne"))$("ne").textContent=""})});
 const ago=ts=>{if(!ts)return"";const m=(now()-ts)/6e4|0;return m<1?"vừa xong":m<60?m+" phút trước":m<1440?(m/60|0)+" giờ trước":(m/1440|0)+" ngày trước"};
 let unl=onValue(query(ref(db,"rooms"),orderByChild("ts"),limitToLast(20)),snap=>{const el=$("rl");if(!el)return;const L=[];snap.forEach(ch=>{const v=ch.val()||{},pl=Array.isArray(v.pl)?v.pl:[];L.push({k:ch.key,o:pl[0]?pl[0].n:"",n:pl.length,st:v.st||0,w:v.w==null?-1:v.w,ts:v.ts||0})});L.reverse();L.splice(0,L.length,...L.filter(r=>now()-r.ts<STALE));
 el.innerHTML=L.length?L.map(r=>{const s=r.w>=0?2:r.st?1:0;return"<div class='rm s"+s+"' data-rc='"+esc(r.k)+"'><div><b>"+esc(r.k)+"</b><small>👑 "+esc(r.o)+"</small></div><div class='rs'><span class='st sb"+s+"'>"+["Đang chờ","Đang chơi","Đã xong"][s]+"</span><small>"+r.n+" người · "+ago(r.ts)+"</small></div></div>"}).join(""):"<div class='em'>Chưa có phòng nào.<br>Nhập một mã phòng mới để tạo phòng đầu tiên.</div>";
