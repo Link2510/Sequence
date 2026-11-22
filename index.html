@@ -17,6 +17,17 @@ input{width:100%;box-sizing:border-box}button{cursor:pointer}button.p{background
 .c.m{box-shadow:0 0 0 3px #00e5ff,0 0 10px 2px rgba(0,229,255,.85)}
 .c.f{animation:bl .5s 5;z-index:3}@keyframes bl{0%,100%{box-shadow:0 0 0 3px #ff2d95,0 0 14px 4px rgba(255,45,149,.9);transform:scale(1.12)}50%{background:#ff2d95;transform:scale(1.32);box-shadow:0 0 0 4px #fff,0 0 24px 9px rgba(255,45,149,.95)}}
 .hr{cursor:pointer}
+.nt{background:var(--c);border:1px solid var(--bd);border-radius:18px;padding:30px 20px 24px;text-align:center;margin-top:8px}
+.nt h2{font-size:22px;margin:0 0 8px}.nt p{margin:0 auto;max-width:34ch;line-height:1.5}
+.ni{width:84px;height:84px;border-radius:50%;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;background:rgba(47,143,78,.14);color:#1a7f45}
+.ni.w{background:rgba(245,158,11,.16);color:#b45309}.ni.b{background:rgba(214,58,58,.12);color:#c62828}
+.ni svg{width:44px;height:44px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.sp{width:34px;height:34px;border:4px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.nb{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap}.nb:empty{display:none}.nb button{margin:0}
+.al{background:rgba(214,58,58,.12);border:1px solid rgba(214,58,58,.45);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+@media (prefers-color-scheme:dark){.ni{color:#4ade80}.ni.w{color:#fbbf24}.ni.b{color:#f87171}}
+
 main:has(.ld)>h1{display:none}
 .ld{display:flex;flex-direction:column;gap:16px}
 .hero{position:relative;text-align:center;padding:28px 16px 22px;border-radius:20px;color:#f6f0dc;overflow:hidden;background:radial-gradient(120% 120% at 50% 0%,#2a8658,#124a2f 70%);box-shadow:inset 0 0 0 3px #0c3a24,0 10px 26px rgba(0,0,0,.28)}
@@ -127,7 +138,7 @@ const enc=s=>({pl:s.pl,st:s.st,tu:s.tu,w:s.w,sw:s.sw,lg:s.lg,sc:s.sc,tn:s.tn,cl:
 const fresh=(pl,tn=2,cl=[0,1,2])=>({pl,tn,cl,gid:"",sn:0,se:"",dc:[],st:0,tu:0,w:-1,sw:0,lg:"",sc:[0,0,0],hs:[],lm:-1,ch:Array(100).fill(-1),lk:Array(100).fill(0),dk:[],h:[]});
 let S=null,me="",code="",sel=null,fl=-1,seen=0,inRoom=0,animOn=0,seenG="",winSeen="",snd=1,tAl=0,tOn=0,sqG=null,sqSeen=0,sqT=0,sqCells=[],sqUntil=0;
 try{if(localStorage.getItem("sqs")=="0")snd=0}catch(e){}
-const tx=fn=>runTransaction(ref(db,"rooms/"+code),c=>{const r=fn(c?dec(c):null);return r==null?r:enc(r)}).catch(e=>{$("app").insertAdjacentHTML("afterbegin","<p style='color:#d63a3a'>Lỗi kết nối: "+esc(e.message)+"</p>")});
+const tx=fn=>runTransaction(ref(db,"rooms/"+code),c=>{const r=fn(c?dec(c):null);return r==null?r:enc(r)}).catch(e=>{$("app").insertAdjacentHTML("afterbegin","<div class='al'>⚠️ Lỗi kết nối: "+esc(e.message)+"</div>")});
 function seqs(s,t,last){let g=0,cl=[];for(const[dr,dc]of[[0,1],[1,0],[1,1],[1,-1]])for(let r=0;r<10;r++)for(let c=0;c<10;c++){const e=c+4*dc;if(r+4*dr>9||e<0||e>9)continue;const w=[0,1,2,3,4].map(k=>(r+k*dr)*10+c+k*dc);if(!w.includes(last)||!w.every(x=>s.ch[x]==t||BD[x]=="★"))continue;if(w.filter(x=>s.lk[x]).length>1)continue;w.forEach(x=>{if(BD[x]!="★")s.lk[x]=1});s.sc[t]++;g++;cl.push(...w)}if(g){s.sn=(s.sn||0)+1;s.se=t+"|"+cl.join(",")}return g}
 const draw=(s,h)=>{if(!s.dk.length&&s.dc.length){s.dk=shuf(s.dc);s.dc=[]}if(s.dk.length)h.push(s.dk.pop())};
 const pos=i=>"hàng "+((i/10|0)+1)+", cột "+(i%10+1);
@@ -189,6 +200,16 @@ const beep=()=>tone([660,880],.15),fan=()=>tone([523,659,784,1047,1319],.12);
 function turnAlert(on){on=on?1:0;if(on==tOn)return;tOn=on;clearInterval(tAl);if(!on){document.title="Sequence";return}
 beep();try{if(navigator.vibrate)navigator.vibrate([120,60,120])}catch(e){}
 let f=0;const tick=()=>{document.title=document.hidden&&f++%2?"Sequence":"🔔 Đến lượt bạn!"};tick();tAl=setInterval(tick,1000)}
+const IC={
+sp:"<span class='sp'></span>",
+door:"<svg viewBox='0 0 48 48'><rect x='10' y='8' width='20' height='32' rx='2'/><circle cx='25' cy='24' r='1.6'/><path d='M34 24h10m-4-4 4 4-4 4'/></svg>",
+cards:"<svg viewBox='0 0 48 48'><rect x='9' y='14' width='19' height='26' rx='3'/><rect x='20' y='8' width='19' height='26' rx='3'/></svg>",
+users:"<svg viewBox='0 0 48 48'><circle cx='18' cy='18' r='6'/><circle cx='33' cy='20' r='5'/><path d='M6 40c0-8 5-12 12-12s12 4 12 12M31 30c6 0 11 3 11 10'/></svg>",
+trash:"<svg viewBox='0 0 48 48'><path d='M12 16h24M19 16v-5h10v5M15 16l2 24h14l2-24M21 22v12M27 22v12'/></svg>",
+warn:"<svg viewBox='0 0 48 48'><path d='M24 7 43 40H5z'/><path d='M24 20v10'/><circle cx='24' cy='35' r='1.2'/></svg>"};
+const note=(ic,tone,ti,tx,bs)=>"<div class='nt'><div class='ni "+tone+"'>"+ic+"</div><h2>"+ti+"</h2><p class='mu'>"+tx+"</p><div class='nb'>"+(bs||"")+"</div></div>";
+const BK="<button class='p' id='bk'>Về màn hình đầu</button>";
+const bindBk=()=>{const b=$("bk");if(b)b.onclick=()=>location.reload()};
 function winBox(mi){const n=TNs(S)[S.w],mem=S.pl.filter(p=>p.t==S.w).map(p=>esc(p.n)+(p.bot?" (AI)":"")).join(", "),mine=S.pl[mi].t==S.w,col=(S.cl||[0,1,2]).map(c=>PC[c]);
 let cf="";for(let i=0;i<40;i++)cf+="<span class='cf' style='left:"+(Math.random()*100)+"%;background:"+["#ffd54a","#ff4fa3","#19e3ff",col[S.w],"#fff"][i%5]+";animation-duration:"+(2.5+Math.random()*2.5)+"s;animation-delay:"+(Math.random()*1.2)+"s'></span>";
 return cf+"<div id='wn'><div class='bx'><div style='font-size:48px'>🏆</div><h2 class='t"+S.w+"'>Đội "+n+" thắng!</h2><div>"+mem+"</div><p class='mu'>"+(mine?"Chúc mừng, đội của bạn đã chiến thắng!":"Chúc bạn may mắn ở ván sau!")+"</p><div>"+TNs(S).map((x,k)=>"<b class='t"+k+"'>"+x+" "+S.sc[k]+"</b>").join(" · ")+"</div><div class='wb'><button id='wc'>Xem bàn cờ</button>"+(mi==0?"<button class='p' id='wa'>Ván mới</button>":"")+"</div></div></div>"}
@@ -197,9 +218,9 @@ a.innerHTML="<div style='text-align:center;padding:36px 0'><div class='mu'>Đang
 const show=k=>{const q=L[k%len];$("ro").innerHTML="<span class='t"+q.t+"'>"+esc(q.n)+"</span>";$("rt").textContent="Đội "+TNs(S)[q.t]};
 const step=k=>{show(k);if(k<N)setTimeout(()=>step(k+1),70+Math.pow(k/N,3)*380);else{$("ro").style.transform="scale(1.25)";$("rt").textContent="Đội "+TNs(S)[L[f].t]+" đánh đầu tiên!";setTimeout(()=>{animOn=0;R()},1400)}};step(0)}
 function R(){const a=$("app");if(!S||!me)return;{const st=document.documentElement.style;(S.cl||[0,1,2]).forEach((c,k)=>st.setProperty("--k"+k,PC[c]))}if(animOn)return;const mi=S.pl.findIndex(p=>p.n==me);
-if(mi<0){if(inRoom&&!S.st){a.innerHTML="<p>Bạn đã bị chủ phòng xóa khỏi phòng.</p><button class='p' id='bk'>Về màn hình đầu</button>";$("bk").onclick=()=>location.reload();return}
-if(!inRoom&&!S.st&&S.pl.length<12){a.innerHTML="<p>Đang vào phòng…</p>";return}
-a.innerHTML="<p>Ván đã bắt đầu hoặc phòng đã đầy. Hãy dùng mã phòng khác hoặc đúng tên đã tham gia.</p>";return}inRoom=1;if(S.st&&S.gid&&S.gid!=seenG){seenG=S.gid;if(S.hs.length<=1){roll();return}}
+if(mi<0){if(inRoom&&!S.st){a.innerHTML=note(IC.door,"w","Bạn đã bị mời ra khỏi phòng","Chủ phòng đã xóa bạn khỏi phòng <b>"+esc(code)+"</b>. Bạn có thể chọn một phòng khác.",BK);bindBk();return}
+if(!inRoom&&!S.st&&S.pl.length<12){a.innerHTML=note(IC.sp,"","Đang vào phòng…","Phòng <b>"+esc(code)+"</b>","");return}
+a.innerHTML=S.st?note(IC.cards,"w","Ván đã bắt đầu","Phòng <b>"+esc(code)+"</b> đang chơi dở và không nhận thêm người. Nếu bạn là người trong ván, hãy quay lại và nhập đúng tên đã dùng. Nếu không, hãy chọn phòng khác.",BK):note(IC.users,"w","Phòng đã đầy","Phòng <b>"+esc(code)+"</b> đã có đủ 12 người. Hãy chọn một phòng khác.",BK);bindBk();return}inRoom=1;if(S.st&&S.gid&&S.gid!=seenG){seenG=S.gid;if(S.hs.length<=1){roll();return}}
 const owner=mi==0;
 if(!S.st){turnAlert(0);const TT=TNs(S),bad=!ok(S),inv=S.pl.length<2,sz=TT.map((_,k)=>S.pl.filter(p=>p.t==k).length),rule=sz.every(x=>x==sz[0])&&[2,3,4,6,8,9,10,12].includes(S.pl.length),wh=rule||bad?"":"<p class='warn'>⚠️ Chưa theo luật chuẩn: các đội phải bằng số người và tổng số người là 2, 3, 4, 6, 8, 9, 10 hoặc 12. Bạn vẫn có thể bắt đầu.</p>";
 let h="<div class='lb'><div class='lh'><div><div class='mu'>Mã phòng</div><div class='code'>"+esc(code.toUpperCase())+"</div></div><button id='cp'>Sao chép mã</button></div>";
@@ -233,8 +254,8 @@ a.querySelectorAll("[data-h]").forEach(b=>{const i=+b.dataset.h;if(i>=0)b.onclic
 if($("sn"))$("sn").onchange=e=>{snd=e.target.checked;try{localStorage.setItem("sqs",snd?"1":"0")}catch(x){}};if($("wc"))$("wc").onclick=()=>{winSeen=S.gid||"x";R()};if($("wa"))$("wa").onclick=()=>{winSeen="";tx(again)};botTick()}
 function enter(){me=$("nm").value.replace(/[<>&"]/g,"").trim().slice(0,14);code=$("rc").value.toLowerCase().replace(/[^a-z0-9_-]/g,"").slice(0,20);if(!me||!code){const f=$(me?"rc":"nm");f.classList.add("err");f.focus();return}
 try{localStorage.setItem("sq",JSON.stringify([me,code]))}catch(e){}
-if(unl)unl();$("app").innerHTML="<p>Đang vào phòng…</p>";
-onValue(ref(db,"rooms/"+code),snap=>{const v=snap.val();S=v?dec(v):null;if(S)seen=1;else if(seen){seen=0;$("app").innerHTML="<p>Phòng đã bị xóa, có thể do quá 30 phút không hoạt động.</p><button class='p' id='bk'>Về màn hình đầu</button>";$("bk").onclick=()=>location.reload();return}R()},e=>{$("app").innerHTML="<p style='color:#d63a3a'>Không đọc được dữ liệu: "+esc(e.message)+"</p>"});
+if(unl)unl();$("app").innerHTML=note(IC.sp,"","Đang vào phòng…","Phòng <b>"+esc(code)+"</b>","");
+onValue(ref(db,"rooms/"+code),snap=>{const v=snap.val();S=v?dec(v):null;if(S)seen=1;else if(seen){seen=0;$("app").innerHTML=note(IC.trash,"b","Phòng đã đóng","Phòng đã bị chủ phòng xóa, hoặc đã tự xóa sau 30 phút không có hoạt động.",BK);bindBk();return}R()},e=>{$("app").innerHTML=note(IC.warn,"b","Không đọc được dữ liệu phòng",esc(e.message),"<button class='p' id='bk'>Thử lại</button>");bindBk()});
 tx(join)}
 let sv=[];try{sv=JSON.parse(localStorage.getItem("sq"))||[]}catch(e){}
 const fcs=["J♦","K♠","A♥"].map((c,i)=>"<div class='fc f"+i+"'>"+cardSvg(c)+"</div>").join("");
@@ -249,7 +270,7 @@ $("rnd").onclick=()=>{$("rc").value=Array.from({length:5},()=>"abcdefghjkmnpqrst
 const ago=ts=>{if(!ts)return"";const m=(now()-ts)/6e4|0;return m<1?"vừa xong":m<60?m+" phút trước":m<1440?(m/60|0)+" giờ trước":(m/1440|0)+" ngày trước"};
 let unl=onValue(query(ref(db,"rooms"),orderByChild("ts"),limitToLast(20)),snap=>{const el=$("rl");if(!el)return;const L=[];snap.forEach(ch=>{const v=ch.val()||{},pl=Array.isArray(v.pl)?v.pl:[];L.push({k:ch.key,o:pl[0]?pl[0].n:"",n:pl.length,st:v.st||0,w:v.w==null?-1:v.w,ts:v.ts||0})});L.reverse();L.splice(0,L.length,...L.filter(r=>now()-r.ts<STALE));
 el.innerHTML=L.length?L.map(r=>{const s=r.w>=0?2:r.st?1:0;return"<div class='rm s"+s+"' data-rc='"+esc(r.k)+"'><div><b>"+esc(r.k)+"</b><small>👑 "+esc(r.o)+"</small></div><div class='rs'><span class='st sb"+s+"'>"+["Đang chờ","Đang chơi","Đã xong"][s]+"</span><small>"+r.n+" người · "+ago(r.ts)+"</small></div></div>"}).join(""):"<div class='em'>Chưa có phòng nào.<br>Nhập một mã phòng mới để tạo phòng đầu tiên.</div>";
-el.querySelectorAll("[data-rc]").forEach(b=>b.onclick=()=>{$("rc").value=b.dataset.rc;$("rc").classList.remove("err");el.querySelectorAll(".rm").forEach(x=>x.classList.toggle("sel",x===b));($("nm").value?$("jb"):$("nm")).focus()})},e=>{const el=$("rl");if(el)el.textContent="Không tải được danh sách: "+e.message});
+el.querySelectorAll("[data-rc]").forEach(b=>b.onclick=()=>{$("rc").value=b.dataset.rc;$("rc").classList.remove("err");el.querySelectorAll(".rm").forEach(x=>x.classList.toggle("sel",x===b));($("nm").value?$("jb"):$("nm")).focus()})},e=>{const el=$("rl");if(el)el.innerHTML="<div class='em'>Không tải được danh sách phòng: "+esc(e.message)+"</div>"});
 
 async function sweep(){try{const q=await get(query(ref(db,"rooms"),orderByChild("ts"),endAt(now()-STALE)));const ks=[];q.forEach(c=>{ks.push(c.key)});await Promise.all(ks.map(k=>remove(ref(db,"rooms/"+k))))}catch(e){}}
 setTimeout(sweep,2500);setInterval(sweep,10*60*1000);
