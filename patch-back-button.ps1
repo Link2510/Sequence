@@ -1,17 +1,24 @@
-# Chạy sau khi đè file index.html mới vào thư mục game:
+# Chạy sau khi đè file index.html mới, hoặc sau khi thêm game mới:
 #   powershell -ExecutionPolicy Bypass -File .\patch-back-button.ps1
+# Tự quét mọi thư mục có index.html (game mới chỉ cần tạo thư mục + index.html rồi chạy script).
 # Script làm 2 việc, và bỏ qua file/nội dung đã đúng:
 #   1. Thêm nút "Về sảnh trò chơi" nếu file chưa có.
 #   2. Sửa host Realtime Database sai (...firebaseio.com) thành ...asia-southeast1.firebasedatabase.app.
 # Sau đó chạy: firebase deploy --only hosting:boardgameace --project sequence-23c7f
 
+# Không truyền -Files: tự quét mọi thư mục game có index.html trong repo
+# (bỏ qua thư mục ẩn, legacy/ và index.html ở gốc là trang chủ).
+# Truyền -Files nếu bạn muốn xử lý danh sách cụ thể.
 param(
-  [string[]]$Files = @(
-    "$PSScriptRoot\sequence\index.html",
-    "$PSScriptRoot\rummikub\index.html",
-    "$PSScriptRoot\fotr\index.html"
-  )
+  [string[]]$Files
 )
+
+if (-not $Files -or $Files.Count -eq 0) {
+  $Files = Get-ChildItem -LiteralPath $PSScriptRoot -Directory -Force |
+    Where-Object { $_.Name -notmatch '^\.' -and $_.Name -ne 'legacy' } |
+    ForEach-Object { Join-Path $_.FullName 'index.html' } |
+    Where-Object { Test-Path -LiteralPath $_ }
+}
 
 $snippet = @'
 <a class="bg-home" href="https://boardgameace.web.app/" title="Về sảnh trò chơi" aria-label="Về sảnh trò chơi">← Sảnh trò chơi</a>
