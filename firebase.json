@@ -1,11 +1,37 @@
 {
-  "hosting": {
-    "target": "sequenceace",
-    "public": ".",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ]
-  }
+  "hosting": [
+    {
+      "target": "boardgameace",
+      "public": ".",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/.git/**",
+        "**/.github/**",
+        "**/.firebase/**",
+        "**/node_modules/**",
+        "README.md",
+        "legacy/**"
+      ]
+    },
+    {
+      "target": "sequenceace",
+      "public": "legacy",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/.git/**",
+        "**/.github/**",
+        "**/.firebase/**",
+        "**/node_modules/**"
+      ],
+      "redirects": [
+        {
+          "source": "/**",
+          "destination": "https://boardgameace.web.app/",
+          "type": 301
+        }
+      ]
+    }
+  ]
 }

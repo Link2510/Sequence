@@ -5,6 +5,9 @@
   "targets": {
     "sequence-23c7f": {
       "hosting": {
+        "boardgameace": [
+          "boardgameace"
+        ],
         "sequenceace": [
           "sequenceace"
         ]

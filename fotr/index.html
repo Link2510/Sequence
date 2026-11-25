@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hội Nhẫn: trò chơi ăn lượt hợp tác</title>
+<meta name="description" content="Trò chơi bài hợp tác cho 3 đến 4 người với 18 chặng, lấy cảm hứng từ hành trình của Hội Nhẫn. Bản tự làm của người hâm mộ.">
+<meta name="theme-color" content="#13201a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2313201a'/%3E%3Ccircle cx='16' cy='17' r='8' fill='none' stroke='%23d9aa3c' stroke-width='4'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#13201a;--p:#1c2d24;--p2:#253c30;--line:#36533f;--ink:#f4ecd8;--mu:#a8b8a4;--gold:#d9aa3c;--par:#f4ead0;--bad:#e5645a;--ok:#5cc47e;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:radial-gradient(120% 80% at 50% -10%,#27452f,#13201a 62%) fixed;color:var(--ink);font:16px/1.5 "Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:780px;margin:0 auto;padding:14px 14px 70px}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;margin:0;line-height:1.2}
+p{margin:0}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.mu{color:var(--mu)}.s{font-size:13px}
+.btn{border:1px solid var(--line);background:var(--p2);border-radius:12px;padding:11px 16px;font-weight:500;text-decoration:none;display:inline-block;text-align:center}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.g{background:linear-gradient(#e7bd50,#c4932a);color:#2a1d04;border:0;font-weight:700}
+.btn.big{display:block;width:100%;padding:15px 18px;text-align:left;font-size:17px}
+.btn.big small{display:block;font-weight:400;font-size:13px;opacity:.85;margin-top:2px}
+input{width:100%;background:var(--p);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:18px}
+label{display:block;font-size:13px;color:var(--mu);font-weight:500;margin-top:10px}
+label input{margin-top:4px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.top h2{font-size:18px;flex:1;text-align:center}
+.top .btn{padding:8px 12px}
+.card-p{background:var(--p);border:1px solid var(--line);border-radius:16px;padding:14px}
+.hero{text-align:center;padding:30px 16px 22px;border-radius:22px;background:radial-gradient(90% 90% at 50% 0%,#2d5237,#173022 70%);border:1px solid var(--line);box-shadow:inset 0 0 0 3px #0e1f16}
+.hero svg{width:96px;height:96px;filter:drop-shadow(0 0 14px #e8c35a88)}
+.hero h1{font-size:38px;margin:8px 0 4px;color:#f1d27b}
+.menu{display:grid;gap:10px;margin-top:14px}
+.err{border-color:var(--bad)}
+.eh{color:var(--bad);font-size:13px;margin-top:4px;display:block}.eh:empty{display:none}
+
+/* lá bài */
+.cd{--sc:#888;position:relative;width:54px;height:76px;border-radius:8px;background:linear-gradient(#fbf3de,#eadfbf);border:2px solid var(--sc);color:var(--sc);display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 6px #0007;flex:none;user-select:none;padding:0}
+.cd b{position:absolute;top:2px;left:5px;font-size:15px;line-height:1.1;font-weight:700}
+.cd i{position:absolute;bottom:2px;right:5px;font-size:15px;line-height:1.1;font-weight:700;font-style:normal;transform:rotate(180deg)}
+.cd svg{width:58%;height:auto}
+.cd.one{background:radial-gradient(circle at 50% 42%,#fff4bf,#e0b24a 75%);box-shadow:0 0 14px #e8c35aaa,0 2px 6px #0007}
+.cd.mini{width:28px;height:40px;border-width:1.5px;border-radius:5px}
+.cd.mini b{font-size:10px;top:1px;left:2px}.cd.mini i{display:none}.cd.mini svg{width:50%;margin-top:8px}
+.cd.big{width:72px;height:100px}.cd.big b,.cd.big i{font-size:18px}
+button.cd.no{opacity:.35;filter:grayscale(.6);cursor:not-allowed}
+button.cd.ok{transform:translateY(-6px);box-shadow:0 0 0 2px var(--gold),0 6px 12px #0009}
+button.cd.sel{transform:translateY(-14px);box-shadow:0 0 0 3px #fff,0 8px 14px #000a}
+.hand{display:flex;flex-wrap:wrap;gap:6px;padding:14px 4px 4px}
+.mh{display:flex;flex-wrap:wrap;gap:3px;margin-top:6px}
+
+/* bàn chơi */
+.pls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+@media (min-width:700px){.pls.n3{grid-template-columns:repeat(3,1fr)}.pls.n4{grid-template-columns:repeat(4,1fr)}}
+.pb{background:var(--p);border:1px solid var(--line);border-top:4px solid var(--tc);border-radius:12px;padding:9px 10px;font-size:13px;line-height:1.35}
+.pb.on{box-shadow:0 0 0 2px var(--gold),0 0 18px #d9aa3c55}
+.pb .pn{font-size:15px;font-weight:700;color:var(--tc)}
+.pb .pc{font-weight:500}.pb .pg{color:var(--mu);margin:3px 0}.pb .pm{opacity:.9}
+.pb .th{color:#eab08e;margin:3px 0}
+.pb .ok{color:var(--ok);font-weight:700}.pb .bad{color:var(--bad);font-weight:700}
+.tbl{background:radial-gradient(100% 120% at 50% 0%,#2a5136,#183123);border:1px solid var(--line);border-radius:18px;padding:12px;box-shadow:inset 0 0 0 3px #0f2217;min-height:170px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.chip{background:#0f2217aa;border:1px solid var(--line);border-radius:20px;padding:2px 10px;font-size:12.5px;display:inline-flex;align-items:center;gap:6px}
+.chip.g{border-color:var(--gold);color:#f1d27b}
+.trick{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;min-height:112px;align-items:flex-start;padding-top:4px}
+.slot{text-align:center;font-size:12px;color:var(--mu)}
+.slot .cd{display:flex;margin:0 auto 3px}
+.tn{padding:11px 14px;border-radius:12px;background:var(--p);border:1px solid var(--line);margin:10px 0}
+.tn.me{background:linear-gradient(90deg,#c4932a,#e7bd50);color:#2a1d04;border:0;font-weight:700;animation:tp 1.5s ease-in-out infinite}
+@keyframes tp{50%{box-shadow:0 0 0 4px #e7bd5055,0 0 20px #e7bd5099}}
+.pick{display:grid;gap:8px;margin-top:10px}
+.pk{display:block;width:100%;text-align:left;background:var(--p);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.pk b{font-family:Fraunces,Georgia,serif;font-size:18px;color:#f1d27b}
+.pk:disabled{opacity:.5;cursor:not-allowed}
+.pk.take{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.res{margin:12px 0;border-radius:16px;padding:16px;text-align:center;border:1px solid var(--line);background:var(--p)}
+.res.w{border-color:var(--ok)}.res.l{border-color:var(--bad)}
+.res h2{font-size:26px}
+.rr{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+.lst{display:grid;gap:6px;margin-top:8px}
+.li{display:flex;justify-content:space-between;gap:8px;background:var(--p);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+button.li{width:100%;text-align:left;color:inherit}
+button.li.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+button.li.lk{opacity:.55}
+.row2{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.chp{border:1px solid var(--line);background:var(--p);border-radius:10px;padding:8px 12px}
+.chp.on{background:var(--gold);color:#2a1d04;border-color:var(--gold);font-weight:700}
+.note{text-align:center;padding:34px 16px}
+.note h2{margin:10px 0 6px}
+.sp{display:inline-block;width:34px;height:34px;border:4px solid var(--gold);border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tag{display:inline-block;font-size:11.5px;border:1px solid var(--line);border-radius:20px;padding:0 8px;margin:2px 4px 0 0;color:#cfe0c8}
+.foot{margin-top:26px;text-align:center;font-size:12.5px;color:var(--mu)}
+
+/* hướng dẫn */
+dialog{border:0;padding:0;border-radius:18px;width:min(720px,calc(100vw - 20px));max-height:calc(100vh - 24px);background:var(--bg);color:var(--ink);box-shadow:0 20px 60px #000a;overflow:hidden}
+dialog[open]{animation:dgin .22s ease-out;display:flex;flex-direction:column}
+dialog::backdrop{background:#050b08cc;backdrop-filter:blur(3px)}
+@keyframes dgin{from{opacity:0;transform:translateY(10px) scale(.98)}}
+.gh{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--p)}
+.gh h2{font-size:19px}
+.gn{display:flex;gap:6px;overflow-x:auto;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--p)}
+.gn button{white-space:nowrap;border:1px solid var(--line);background:none;border-radius:20px;padding:5px 12px;font-size:14px}
+.gn button.on{background:var(--gold);color:#2a1d04;border-color:var(--gold);font-weight:700}
+.gh,.gn{flex:none}.gn button{flex:none}
+.gb{flex:1;min-height:0;overflow:auto;padding:16px 16px 22px;line-height:1.6}
+.gb h3{font-size:22px;margin-bottom:8px;color:#f1d27b}
+.gb p{margin:0 0 10px}.gb ul,.gb ol{margin:0 0 10px;padding-left:22px}.gb li{margin-bottom:5px}
+.ex{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;background:#0f2217;border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}
+.ex>div{text-align:center;font-size:12.5px;color:var(--mu)}
+.ex .cd{display:flex;margin:0 auto 4px;color:var(--sc)}
+.tip{border-left:4px solid var(--gold);background:var(--p);border-radius:8px;padding:10px 12px;margin:10px 0}
+.sx{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.sx span{display:flex;align-items:center;gap:6px;background:var(--p);border:1px solid var(--line);border-radius:10px;padding:5px 10px}
+.sx svg{width:22px;height:22px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main><div id="app"></div>
+<p class="foot">Bản tự làm của người hâm mộ, không chính thức và không bán. Luật chung theo cơ chế ăn lượt hợp tác; nhân vật, nhiệm vụ và 18 chặng trong trang này do người làm trang tự thiết kế. Muốn chơi các chặng và xem hình minh họa chính thức, hãy mua bản gốc của nhà phát hành.</p></main>
+<dialog id="gd" aria-labelledby="gdt"><div class="gh"><h2 id="gdt">Hướng dẫn chơi</h2><button class="btn" id="gx">Đóng</button></div><div class="gn" id="gnv"></div><div class="gb" id="gbd"></div></dialog>
+
+<script type="module">
+/*ENGINE*/
+const SUITS=["H","M","F","S","R"],SN={H:"Đồi",M:"Núi",F:"Rừng",S:"Bóng tối",R:"Nhẫn"},SCOL={H:"#7a8f2a",M:"#4a6fa5",F:"#1f7a52",S:"#7b4aa3",R:"#b8860b"};
+const T=n=>n==3?12:9;
+const shuf=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const DECK=()=>{const d=[];["H","M","F","S"].forEach(s=>{for(let i=1;i<=8;i++)d.push(s+i)});for(let i=1;i<=5;i++)d.push("R"+i);return d};
+const rk=c=>+c.slice(1);
+const sortH=h=>h.slice().sort((a,b)=>SUITS.indexOf(a[0])-SUITS.indexOf(b[0])||rk(a)-rk(b));
+const WH=(H,p)=>H.filter(t=>t.w==p);
+const hasR=t=>t.cards.some(x=>x[1][0]=="R");
+const hasS=t=>t.cards.some(x=>x[1][0]=="S");
+const CH={
+frodo:{n:"Frodo",r:"Người mang Nhẫn",g:"Thắng ít nhất 1 lượt có chứa lá Nhẫn, và tổng cộng không thắng quá 3 lượt.",lo:1,hi:3,ck:(p,H)=>{const w=WH(H,p);return w.length>=1&&w.length<=3&&w.some(hasR)}},
+sam:{n:"Sam",r:"Người bạn trung thành",g:"Thắng một lượt ngay sau lượt mà Frodo vừa thắng.",lo:1,hi:Infinity,ck:(p,H,x)=>H.some((t,i)=>i>0&&t.w==p&&H[i-1].w==x.fp)},
+gandalf:{n:"Gandalf",r:"Pháp sư xám",g:"Không thắng lượt nào trong 3 lượt đầu, rồi thắng ít nhất 2 lượt sau đó.",lo:2,hi:Infinity,ck:(p,H)=>H.slice(0,3).every(t=>t.w!=p)&&WH(H.slice(3),p).length>=2},
+aragorn:{n:"Aragorn",r:"Kiểm lâm phương Bắc",g:"Thắng ít nhất 3 lượt, trong đó có ít nhất 1 lượt do chính bạn dẫn.",lo:3,hi:Infinity,ck:(p,H)=>{const w=WH(H,p);return w.length>=3&&w.some(t=>t.ld==p)}},
+legolas:{n:"Legolas",r:"Cung thủ tộc Elf",g:"Thắng đúng 2 lượt, và cả hai lượt đó phải được dẫn cùng một chất.",lo:2,hi:2,ck:(p,H)=>{const w=WH(H,p);return w.length==2&&w[0].ls==w[1].ls}},
+gimli:{n:"Gimli",r:"Chiến binh người Lùn",g:"Thu về tổng cộng ít nhất 3 lá chất Núi từ các lượt bạn thắng.",lo:1,hi:Infinity,ck:(p,H)=>WH(H,p).reduce((a,t)=>a+t.cards.filter(x=>x[1][0]=="M").length,0)>=3},
+boromir:{n:"Boromir",r:"Chiến binh thành Gondor",g:"Thắng ít nhất 1 lượt do chất Bóng tối dẫn, và không thắng lượt nào có chứa lá Nhẫn.",lo:1,hi:Infinity,ck:(p,H)=>{const w=WH(H,p);return w.some(t=>t.ls=="S")&&!w.some(hasR)}},
+merry:{n:"Merry",r:"Chàng Hobbit tinh nghịch",g:"Thắng 1 hoặc 2 lượt, không hơn, không kém.",lo:1,hi:2,ck:(p,H)=>{const k=WH(H,p).length;return k>=1&&k<=2}},
+pippin:{n:"Pippin",r:"Chàng Hobbit vụng về",g:"Không thắng bất kỳ lượt nào.",lo:0,hi:0,ck:(p,H)=>WH(H,p).length==0},
+bilbo:{n:"Bilbo",r:"Cụ Hobbit già",g:"Thắng lượt cuối cùng của ván chơi.",lo:1,hi:Infinity,ck:(p,H)=>H.length>0&&H[H.length-1].w==p}
+};
+const THR={
+t1:{n:"Không được thắng lượt đầu tiên.",ck:(p,H)=>H[0].w!=p,ban:[]},
+t2:{n:"Không được thắng lượt cuối cùng.",ck:(p,H)=>H[H.length-1].w!=p,ban:["bilbo"]},
+t3:{n:"Không được thắng hai lượt liên tiếp.",ck:(p,H)=>!H.some((t,i)=>i>0&&t.w==p&&H[i-1].w==p),ban:[]},
+t4:{n:"Không được thắng lượt nào có chứa lá Bóng tối.",ck:(p,H)=>!WH(H,p).some(hasS),ban:["boromir"]},
+t5:{n:"Không được thắng lượt nào do chính bạn dẫn.",ck:(p,H)=>!WH(H,p).some(t=>t.ld==p),ban:["aragorn"]},
+t6:{n:"Không được thắng lượt nào có chứa lá Nhẫn.",ck:(p,H)=>!WH(H,p).some(hasR),ban:["frodo","boromir"]}
+};
+const CAP=[
+{n:"Túi Đáy",d:"Bữa tiệc sinh nhật sắp bắt đầu, nhưng có thứ gì đó lạ lùng đang lẩn quất quanh vườn.",open:1,pool:["sam","gandalf","pippin","bilbo","aragorn"]},
+{n:"Xứ Shire",d:"Con đường làng quen thuộc bỗng trở nên đáng ngờ.",open:1,pool:["sam","merry","pippin","aragorn","gimli"]},
+{n:"Rừng Cổ",d:"Cây cối như đang thì thầm, và lối thoát chỉ hiện ra với ai đủ bình tĩnh.",ro:1,pool:["gandalf","merry","legolas","aragorn","boromir"]},
+{n:"Gò Mộ",d:"Sương mù dày đặc. Hãy giúp nhau trước khi quá muộn.",pass:1,pool:["sam","merry","pippin","aragorn","bilbo"]},
+{n:"Làng Bree",d:"Quán trọ đông người, và ai cũng có chuyện giấu kín.",thr:1,pool:["sam","legolas","gimli","boromir","aragorn","bilbo"]},
+{n:"Đồi Gió",d:"Bóng đêm trườn lên triền đồi, không còn chỗ để lùi.",tr:"S",pool:["gandalf","legolas","gimli","boromir","merry","aragorn"]},
+{n:"Bến Lội",d:"Dòng nước dâng lên, mọi thứ đảo lộn.",lo:"F",pool:["sam","gandalf","legolas","gimli","merry","aragorn"]},
+{n:"Imladris",d:"Nơi nghỉ chân yên bình, nhưng quyết định phía trước không hề dễ.",pass:1,thr:1,pool:["sam","gandalf","aragorn","legolas","gimli","bilbo"]},
+{n:"Hội Đồng",d:"Mọi tiếng nói đều có trọng lượng, và phải thống nhất qua hai ván liền.",rounds:2,pool:["sam","gandalf","aragorn","legolas","gimli","boromir"]},
+{n:"Đèo Tuyết",d:"Gió bão phủ trắng đường đi.",tr:"M",thr:1,pool:["gandalf","aragorn","legolas","gimli","boromir","merry"]},
+{n:"Hầm Mỏ",d:"Bóng tối sâu hun hút, tiếng trống vang đâu đó.",pass:1,lo:"S",pool:["sam","gandalf","aragorn","gimli","pippin","boromir"]},
+{n:"Cây Cầu",d:"Chỉ còn một lối đi duy nhất.",ro:1,tr:"S",thr:1,pool:["sam","gandalf","aragorn","legolas","gimli","merry"]},
+{n:"Rừng Vàng",d:"Ánh sáng dịu dàng che giấu những thử thách riêng.",pass:1,rounds:2,pool:["sam","gandalf","aragorn","legolas","gimli","boromir"]},
+{n:"Gương Nước",d:"Điều bạn thấy chưa chắc đã là sự thật.",lo:"H",thr:1,pool:["sam","gandalf","legolas","gimli","boromir","bilbo"]},
+{n:"Dòng Sông Lớn",d:"Dòng nước cuốn đi, mỗi người một việc.",tr:"F",thr:1,rounds:2,pool:["sam","merry","aragorn","legolas","gimli","boromir"]},
+{n:"Bờ Tây",d:"Mọi lựa chọn đều có cái giá của nó.",lo:"M",tr:"S",pass:1,pool:["sam","gandalf","aragorn","legolas","gimli","boromir","merry"]},
+{n:"Ly Tán",d:"Hội Nhẫn tách ra. Ba ván liên tiếp, không được sai.",rounds:3,pass:1,thr:1,pool:["sam","gandalf","aragorn","legolas","gimli","boromir","merry","pippin"]},
+{n:"Con Đường Phía Trước",d:"Chặng cuối: mọi quy tắc đặc biệt cùng xuất hiện.",tr:"S",lo:"F",pass:1,thr:1,rounds:2,pool:["sam","gandalf","aragorn","legolas","gimli","boromir","merry","pippin","bilbo"]}
+];
+const rt=c=>{const a=[];if(c.open)a.push("Bài Frodo để ngửa");if(c.ro)a.push("Nhẫn mở sẵn");if(c.tr)a.push("Át chủ: "+SN[c.tr]);if(c.lo)a.push("Đảo: dẫn "+SN[c.lo]+" thì lá nhỏ thắng");if(c.pass)a.push("Chuyền bài");if(c.thr)a.push("Mối đe dọa");if((c.rounds||1)>1)a.push(c.rounds+" ván liên tiếp");return a};
+function mk(names,cap,local){return{v:3,id:Math.random().toString(36).slice(2,8),phase:"lobby",cap,rd:0,more:false,dn:[],hu:names.slice(),ctl:names.map((_,i)=>i),pl:names.slice(),h:[],lost:"",ring:-1,rb:false,op:false,ch:[],th:[],pc:[],po:[],pi:0,ld:0,tu:0,tr:[],ls:"",hist:[],res:null,lg:"",local:!!local}}
+function deal(s){const n=s.pl.length,c=CAP[s.cap];let d,l;do{d=shuf(DECK());l=d.pop()}while(l=="R1");const per=T(n);s.lost=l;s.h=s.pl.map((_,i)=>sortH(d.slice(i*per,(i+1)*per)));s.ring=s.h.findIndex(h=>h.includes("R1"));s.rb=!!c.ro;s.op=!!c.open;s.ch=[];s.ch[s.ring]="frodo";s.th=[];s.pc=[];s.po=[];for(let k=1;k<n;k++)s.po.push((s.ring+k)%n);s.pi=0;s.phase="pick";s.hist=[];s.tr=[];s.ls="";s.res=null;s.more=false;s.lg="Mỗi người chọn một nhân vật. Người cầm Nhẫn Chúa tự động nhận vai Frodo."}
+function feas(s){const t=T(s.pl.length);let lo=0,hi=0;s.ch.forEach(id=>{lo+=CH[id].lo;hi+=CH[id].hi});return lo<=t&&t<=hi}
+function assignThr(s){const used=[];s.th=s.pl.map((_,i)=>{const id=s.ch[i];if(id=="frodo")return null;const ok=Object.keys(THR).filter(k=>!used.includes(k)&&!THR[k].ban.includes(id));if(!ok.length)return null;const k=ok[Math.random()*ok.length|0];used.push(k);return k})}
+function begin(s){s.phase="play";s.ld=s.tu=s.ring;s.lg="Bắt đầu! "+s.pl[s.ring]+" (Frodo) đánh lượt đầu."}
+function doPick(s,who,id){if(!s||s.phase!="pick"||s.ctl[s.po[s.pi]]!=who)return;const p=s.po[s.pi];if(!CAP[s.cap].pool.includes(id)||s.ch.includes(id))return;s.ch[p]=id;s.pi++;
+if(s.pi>=s.po.length){if(feas(s)){const c=CAP[s.cap];if(c.thr)assignThr(s);if(c.pass){s.phase="pass";s.pc=s.pl.map(()=>null);s.lg="Mỗi người chọn 1 lá để chuyền úp cho người kế tiếp. Không được chuyền Nhẫn Chúa."}else begin(s)}else{const r=s.ring;s.ch=[];s.ch[r]="frodo";s.pi=0;s.lg="Đội hình này không thể hoàn thành vì tổng số lượt thắng các nhiệm vụ cần không khớp với số lượt của ván. Mọi người chọn lại."}}return s}
+function doPass(s,who,p,c){if(!s||s.phase!="pass"||s.ctl[p]!=who||s.pc[p]!=null||!s.h[p].includes(c)||c=="R1")return;s.pc[p]=c;
+if(s.pc.every(x=>x!=null)){const n=s.pl.length,g=s.pc.slice();s.h=s.h.map((h,i)=>sortH(h.filter(x=>x!=g[i]).concat(g[(i-1+n)%n])));s.pc=[];begin(s)}return s}
+function legal(s,p,c){const h=s.h[p];if(!h.includes(c))return false;if(!s.tr.length)return !(c[0]=="R"&&!s.rb&&h.some(x=>x[0]!="R"));return h.some(x=>x[0]==s.ls)?c[0]==s.ls:true}
+function trickWinner(s){const c=CAP[s.cap];let w=s.tr.find(x=>x.w);if(w)return w;
+if(c.tr&&s.ls!=c.tr){const t=s.tr.filter(x=>x.c[0]==c.tr);if(t.length)return t.reduce((a,b)=>rk(b.c)>rk(a.c)?b:a)}
+const L=s.tr.filter(x=>x.c[0]==s.ls),low=c.lo&&s.ls==c.lo;return L.reduce((a,b)=>(low?rk(b.c)<rk(a.c):rk(b.c)>rk(a.c))?b:a)}
+function endRound(s){const x={fp:s.ch.indexOf("frodo")};const rows=s.pl.map((_,i)=>{const g=!!CH[s.ch[i]].ck(i,s.hist,x),t=s.th&&s.th[i]?!!THR[s.th[i]].ck(i,s.hist):true;return{p:i,id:s.ch[i],ok:g&&t,g,t}});
+s.res={ok:rows.every(r=>r.ok),rows};s.phase="end";const R_=CAP[s.cap].rounds||1;s.more=s.res.ok&&s.rd+1<R_;if(s.res.ok&&!s.more&&!s.dn.includes(s.cap))s.dn.push(s.cap);
+s.lg=s.res.ok?(s.more?"Đạt! Còn "+(R_-s.rd-1)+" ván nữa trong chặng này.":"Cả nhóm hoàn thành chặng!"):"Có nhiệm vụ không hoàn thành."}
+function doPlay(s,who,c,win){if(!s||s.phase!="play"||s.ctl[s.tu]!=who)return;const p=s.tu;if(!legal(s,p,c))return;const n=s.pl.length;s.h[p]=s.h[p].filter(x=>x!=c);if(!s.tr.length)s.ls=c[0];if(c[0]=="R"&&s.ls!="R")s.rb=true;s.tr.push({p,c,w:c=="R1"&&!!win});
+if(s.tr.length<n){s.tu=(p+1)%n;return s}
+const w=trickWinner(s);s.hist.push({ld:s.tr[0].p,w:w.p,ls:s.ls,cards:s.tr.map(x=>[x.p,x.c]),rw:!!s.tr.find(x=>x.w)});
+s.lg=s.pl[w.p]+" thắng lượt này.";s.tr=[];s.ls="";s.ld=s.tu=w.p;
+if(s.h.every(h=>!h.length))endRound(s);return s}
+function joinG(s,name){if(!s)return mk([name],0,false);if(s.hu.includes(name))return;if(s.phase!="lobby"||s.hu.length>=4)return;s.hu.push(name);s.pl=s.hu.slice();s.ctl=s.hu.map((_,i)=>i);return s}
+function startG(s,who){if(!s||s.phase!="lobby"||who!=0||s.hu.length<2)return;if(s.hu.length==2){const a=s.hu[0],b=s.hu[1];s.pl=[a+" ①",b+" ①",a+" ②",b+" ②"];s.ctl=[0,1,0,1]}else{s.pl=s.hu.slice();s.ctl=s.hu.map((_,i)=>i)}s.rd=0;deal(s);return s}
+function setCap(s,who,i){if(!s||s.phase!="lobby"||who!=0||!CAP[i])return;s.cap=i;return s}
+function again(s,who,adv){if(!s||s.phase!="end"||(!s.local&&who!=0))return;if(adv&&s.res.ok){if(s.more)s.rd++;else if(s.cap<CAP.length-1){s.cap++;s.rd=0}else return}else s.rd=0;deal(s);return s}
+function toLobby(s,who){if(!s||s.local||who!=0||s.phase!="end")return;s.phase="lobby";s.pl=s.hu.slice();s.ctl=s.hu.map((_,i)=>i);s.h=[];s.hist=[];s.res=null;s.rd=0;return s}
+/*ENDENGINE*/
+
+/* ---------- giao diện ---------- */
+const $=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const SHAPE={H:'<path d="M1 21C5 8 11 8 15 15C17 12 21 12 23 21Z"/>',M:'<path d="M1 21L9 5l4.5 8 3-4L23 21Z"/>',F:'<path d="M12 1l6 9h-3l4 7h-6v5h-2v-5H5l4-7H6z"/>',S:'<path d="M12 1c4 5 8 8 8 13a8 8 0 0 1-16 0c0-5 4-8 8-13z"/>',R:'<circle cx="12" cy="14" r="7" fill="none" stroke="currentColor" stroke-width="3.6"/><path d="M12 1l3.2 4.4H8.8z"/>'};
+const ico=(s,c)=>"<svg viewBox='0 0 24 24' aria-hidden='true'><g fill='"+(c||SCOL[s])+"' color='"+(c||SCOL[s])+"'>"+SHAPE[s]+"</g></svg>";
+const card=(c,cls,tag,attr)=>{const s=c[0],r=c.slice(1);return"<"+(tag||"div")+" class='cd "+(cls||"")+(c=="R1"?" one":"")+"' style='--sc:"+SCOL[s]+"' title='"+SN[s]+" "+r+(c=="R1"?" (Nhẫn Chúa)":"")+"' "+(attr||"")+"><b>"+r+"</b>"+ico(s)+"<i>"+r+"</i></"+(tag||"div")+">"};
+const PC=["#e0b341","#78b0e6","#7fcb83","#e596b8"];
+let S=null,mode="home",me=-1,code="",myName="",pend=null,FB=null,db=null,off=0,seen=0,tOn=0,loc=false,unsub=null,cfg={seats:3,cap:0},gTab=0;
+const now=()=>Date.now()+off;
+const dn0=()=>{try{return JSON.parse(localStorage.getItem("fotr_dn")||"[]")}catch(e){return[]}};
+const saveDn=c=>{try{const a=dn0();if(!a.includes(c)){a.push(c);localStorage.setItem("fotr_dn",JSON.stringify(a))}}catch(e){}};
+const CFG={apiKey:"AIzaSyBL7SP3B4QL6kN4mdKJ_yMtXOXyKagrZ2I",authDomain:"sequence-23c7f.firebaseapp.com",databaseURL:"https://sequence-23c7f-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"sequence-23c7f",storageBucket:"sequence-23c7f.firebasestorage.app",messagingSenderId:"535984225423",appId:"1:535984225423:web:53fd014176d3c3b59104fa"};
+const ringSvg="<svg viewBox='0 0 96 96' aria-hidden='true'><defs><linearGradient id='rg' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#ffe59a'/><stop offset='1' stop-color='#b8860b'/></linearGradient></defs><circle cx='48' cy='50' r='30' fill='none' stroke='url(#rg)' stroke-width='12'/><circle cx='48' cy='50' r='30' fill='none' stroke='#fff6' stroke-width='2' stroke-dasharray='3 7'/></svg>";
+
+function run(fn){pend=null;if(loc){const r=fn(S);if(r){S=r;if(S.phase=="end"&&S.res&&S.res.ok&&!S.more)saveDn(S.cap);R()}}else tx(fn)}
+const mySeats=()=>S.pl.map((_,i)=>i).filter(i=>S.ctl[i]==me);
+const actor=()=>loc?(S.phase=="pick"?S.po[S.pi]:S.phase=="pass"?S.pc.findIndex(x=>x==null):S.tu):-1;
+function turnAlert(on){on=on?1:0;if(on==tOn)return;tOn=on;document.title=on?"🔔 Đến lượt bạn!":"Hội Nhẫn: trò chơi ăn lượt hợp tác"}
+const note=(ic,t,tx,bs)=>`<div class="note card-p">${ic?`<span class="${ic}"></span>`:""}<h2>${t}</h2><p class="mu">${tx}</p><div class="rr">${bs||""}</div></div>`;
+const tags=c=>rt(c).map(x=>`<span class="tag">${x}</span>`).join("");
+
+function R(){const a=$("app");
+if(mode=="home"){a.innerHTML=`<div class="hero">${ringSvg}<h1>Hội Nhẫn</h1><p>Trò chơi ăn lượt hợp tác cho 2 đến 4 người · 18 chặng</p><p class="mu s" style="margin-top:6px">Lấy cảm hứng từ hành trình của Hội Nhẫn · Bản tự làm của người hâm mộ</p></div>
+<div class="menu"><button class="btn g big" id="hl">Chơi thử một mình<small>Bạn điều khiển cả nhóm, tất cả bài để ngửa. Hợp để học luật.</small></button>
+<button class="btn big" id="ho">Chơi trực tuyến cùng bạn bè<small>2 đến 4 người, mỗi người một điện thoại, bài giữ kín.</small></button>
+<button class="btn big" id="hg">Hướng dẫn chơi<small>Đọc luật từ đầu, có hình minh họa và ví dụ.</small></button></div>`;
+$("hl").onclick=()=>{mode="setup";R()};$("ho").onclick=()=>{mode="enter";R()};$("hg").onclick=()=>openGuide(0);return}
+if(mode=="setup"){const dn=dn0();a.innerHTML=`<div class="top"><button class="btn" id="bk">←</button><h2>Chơi thử một mình</h2><button class="btn" id="hg">Luật</button></div>
+<div class="card-p"><p><b>Số người trong nhóm</b></p><div class="row2">${[3,4].map(n=>`<button class="chp ${cfg.seats==n?"on":""}" data-n="${n}">${n} người</button>`).join("")}</div>
+<p style="margin-top:14px"><b>Chặng</b> <span class="mu s">(đã hoàn thành ${dn.length}/${CAP.length})</span></p><div class="lst">${CAP.map((c,i)=>`<button class="li ${cfg.cap==i?"on":""}" data-c="${i}"><span><b>${i+1}. ${c.n}</b> ${dn.includes(i)?"<span style='color:var(--ok)'>✔</span>":""}<br><span class="mu s">${c.d}</span><br>${tags(c)}</span></button>`).join("")}</div>
+<button class="btn g big" id="go" style="margin-top:14px;text-align:center">Bắt đầu chặng ${cfg.cap+1}</button></div>`;
+$("bk").onclick=()=>{mode="home";R()};$("hg").onclick=()=>openGuide(0);
+a.querySelectorAll("[data-n]").forEach(b=>b.onclick=()=>{cfg.seats=+b.dataset.n;R()});a.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{cfg.cap=+b.dataset.c;R()});
+$("go").onclick=()=>{loc=true;S=mk(Array.from({length:cfg.seats},(_,i)=>"Ghế "+(i+1)),cfg.cap,true);S.local=true;deal(S);mode="game";R()};return}
+if(mode=="enter"){let sv=[];try{sv=JSON.parse(localStorage.getItem("fotr")||"[]")}catch(e){}
+a.innerHTML=`<div class="top"><button class="btn" id="bk">←</button><h2>Chơi trực tuyến</h2><button class="btn" id="hg">Luật</button></div>
+<div class="card-p"><label>Tên của bạn<input id="nm" maxlength="14" placeholder="Ví dụ: Lan" value="${esc(sv[0]||"")}"></label>
+<label>Mã phòng<input id="rc" maxlength="20" placeholder="Ví dụ: hoinhan" value="${esc(sv[1]||"")}"></label>
+<button class="btn g big" id="jb" style="margin-top:14px;text-align:center">Vào phòng</button>
+<p class="mu s" style="margin-top:10px">Người vào phòng đầu tiên là chủ phòng. Cả nhóm nhập cùng một mã phòng. Muốn vào lại giữa ván, nhập đúng tên cũ.</p></div>`;
+$("bk").onclick=()=>{mode="home";R()};$("hg").onclick=()=>openGuide(0);$("jb").onclick=enter;
+["nm","rc"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key=="Enter")enter()}));return}
+if(mode=="wait"){a.innerHTML=note("sp","Đang vào phòng…","Phòng <b>"+esc(code)+"</b>","");return}
+if(!S){a.innerHTML=note("","Phòng không còn tồn tại","Phòng đã bị đóng hoặc đã tự xóa sau 30 phút không có hoạt động.",`<button class="btn g" id="bk">Về màn hình đầu</button>`);$("bk").onclick=()=>leave();return}
+if(!loc){if(!S.hu){S.hu=S.pl.slice();S.ctl=S.pl.map((_,i)=>i)}me=S.hu.indexOf(myName);if(me<0){a.innerHTML=note("","Không vào được phòng","Ván đã bắt đầu hoặc phòng đã đủ 4 người. Nếu bạn là người trong ván, hãy nhập đúng tên đã dùng.",`<button class="btn g" id="bk">Về màn hình đầu</button>`);$("bk").onclick=()=>leave();return}}
+if(S.phase=="lobby"){turnAlert(0);return lobbyR(a)}
+if(S.phase=="pick"){turnAlert(!loc&&S.ctl[S.po[S.pi]]==me);return pickR(a)}
+turnAlert(!loc&&((S.phase=="play"&&S.ctl[S.tu]==me)||(S.phase=="pass"&&mySeats().some(i=>S.pc[i]==null))));return tableR(a)}
+
+function topbar(){const c=CAP[S.cap],R_=c.rounds||1;return`<div class="top"><button class="btn" id="bk">←</button><h2>${S.cap+1}. ${esc(c.n)}${R_>1?` <span class="mu s">· ván ${S.rd+1}/${R_}</span>`:""}</h2><button class="btn" id="hg">Luật</button></div>`}
+function bindTop(){const b=$("bk");if(b)b.onclick=()=>{if(loc){loc=false;S=null;mode="setup";R()}else leave()};const g=$("hg");if(g)g.onclick=()=>openGuide(0)}
+
+function lobbyR(a){const host=me==0,n=S.hu.length;
+a.innerHTML=topbar().replace(/<h2>.*?<\/h2>/,"<h2>Phòng chờ</h2>")+`<div class="card-p"><p class="mu s">Mã phòng</p><h1 style="letter-spacing:.08em">${esc(code.toUpperCase())}</h1><p class="mu s" style="margin-top:4px">Gửi mã này cho bạn bè. Cần từ 2 đến 4 người để bắt đầu.</p></div>
+<h3 style="margin:16px 0 6px">Người chơi (${n}/4)</h3>${n==2?`<p class="mu s">Chơi 2 người: mỗi người điều khiển <b>hai nhân vật</b>. Bài của người kia vẫn giữ kín.</p>`:""}<div class="lst">${S.hu.map((p,i)=>`<div class="li"><span>${esc(p)}${i==0?" 👑":""}${i==me?" <span class='mu s'>(bạn)</span>":""}</span></div>`).join("")}</div>
+<h3 style="margin:16px 0 6px">Chặng ${host?"":"<span class='mu s'>(chủ phòng chọn)</span>"}</h3><div class="lst">${CAP.map((c,i)=>`<button class="li ${S.cap==i?"on":""}" data-c="${i}" ${host?"":"disabled"}><span><b>${i+1}. ${c.n}</b> ${S.dn.includes(i)?"<span style='color:var(--ok)'>✔</span>":""}<br><span class="mu s">${c.d}</span><br>${tags(c)}</span></button>`).join("")}</div>
+${host?`<button class="btn g big" id="st" style="margin-top:14px;text-align:center" ${n<2?"disabled":""}>Bắt đầu chặng ${S.cap+1} (${n} người)</button>${n<2?`<p class="mu s" style="margin-top:6px">Chờ thêm người. Muốn tập một mình, hãy dùng chế độ "Chơi thử một mình" ở màn hình đầu.</p>`:""}`:`<p class="mu" style="margin-top:14px;text-align:center">Chờ chủ phòng bắt đầu…</p>`}`;
+bindTop();a.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>run(s=>setCap(s,me,+b.dataset.c)));const st=$("st");if(st)st.onclick=()=>run(s=>startG(s,me))}
+
+const handOf=(p,sz)=>S.h[p].map(c=>card(c,sz)).join("");
+function overview(){const n=S.pl.length;return`<div class="pls n${n}">${S.pl.map((p,i)=>{const id=S.ch[i],c=id?CH[id]:null,w=S.hist.filter(t=>t.w==i).length,act=(S.phase=="pick"?S.po[S.pi]==i:S.phase=="play"?S.tu==i:S.phase=="pass"?S.pc[i]==null:false);
+const rs=S.res?S.res.rows[i]:null,th=S.th&&S.th[i]?THR[S.th[i]]:null,showH=(loc||(S.op&&i==S.ring&&S.ctl[i]!=me))&&S.phase!="lobby"&&S.h[i];
+return`<div class="pb ${act?"on":""}" style="--tc:${PC[i]}"><div class="pn">${esc(p)}${i==S.ring?" 💍":""}${!loc&&S.ctl[i]==me?" (bạn)":""}</div>${c?`<div class="pc">${c.n} · ${c.r}</div><div class="pg">${c.g}</div>`:`<div class="mu">Chưa chọn nhân vật</div>`}${th?`<div class="th">⚠ Mối đe dọa: ${th.n}</div>`:""}${S.phase=="play"||S.phase=="end"?`<div class="pm">Thắng ${w} lượt · còn ${S.h[i].length} lá</div>`:""}${rs?`<div class="${rs.ok?"ok":"bad"}">${rs.ok?"✔ Hoàn thành":"✖ Không đạt"}${rs.g&&!rs.t?" (vi phạm mối đe dọa)":""}</div>`:""}${showH?`<div class="mh">${handOf(i,"mini")}</div>`:""}</div>`}).join("")}</div>`}
+function chips(){const c=CAP[S.cap];return`<div class="chips"><span class="chip g">Lá thất lạc: ${card(S.lost,"mini")}</span><span class="chip">${S.rb?"Nhẫn: đã mở, có thể dẫn":"Nhẫn: chưa được dẫn"}</span>${S.ls?`<span class="chip">Chất dẫn: ${SN[S.ls]}</span>`:""}${rt(c).map(x=>`<span class="chip">${x}</span>`).join("")}</div>`}
+
+function pickR(a){const seat=S.po[S.pi],mine=loc||S.ctl[seat]==me,pool=CAP[S.cap].pool,taken=id=>S.ch.indexOf(id),c=CAP[S.cap],hs=loc?[seat]:mySeats();
+a.innerHTML=topbar()+`<p class="mu s">${esc(c.d)}</p><div class="tn ${mine&&!loc?"me":""}">${mine?(loc?`Chọn nhân vật cho <b>${esc(S.pl[seat])}</b>`:`Đến lượt bạn chọn nhân vật cho <b>${esc(S.pl[seat])}</b>!`):`Đang chờ <b>${esc(S.hu?S.hu[S.ctl[seat]]:S.pl[seat])}</b> chọn nhân vật…`}</div>
+<p class="mu s">${esc(S.lg)}</p><p class="mu s" style="margin:6px 0">Gợi ý: nhìn bài trên tay để chọn nhiệm vụ hợp với mình, nhưng <b>đừng nói ra bài của bạn</b>.</p>${chips()}${overview()}
+<h3 style="margin:10px 0 4px">Nhân vật có thể chọn</h3><div class="pick">${pool.map(id=>{const ch=CH[id],t=taken(id);return`<button class="pk ${t<0&&mine?"take":""}" data-id="${id}" ${t>=0||!mine?"disabled":""}><b>${ch.n}</b> <span class="mu s">· ${ch.r}</span><br><span class="s">${ch.g}</span>${t>=0?`<br><span class="mu s">Đã được ${esc(S.pl[t])} chọn</span>`:""}</button>`}).join("")}</div>
+${hs.map(i=>`<h3 style="margin:14px 0 2px">Bài của ${loc||hs.length>1?esc(S.pl[i]):"bạn"}</h3><div class="mh" style="gap:5px">${handOf(i,"")}</div>`).join("")}`;
+bindTop();a.querySelectorAll("[data-id]").forEach(b=>b.onclick=()=>run(s=>doPick(s,loc?s.ctl[s.po[s.pi]]:me,b.dataset.id)))}
+
+function tableR(a){const pass=S.phase=="pass",end=S.phase=="end",myTurn=S.phase=="play"&&(loc||S.ctl[S.tu]==me),nm=i=>esc(S.pl[i]);
+const seats=loc?(S.phase=="pass"?[actor()]:S.phase=="play"?[S.tu]:[]):mySeats();
+let h=topbar();
+if(end){const rs=S.res,ok=loc||me==0,R_=CAP[S.cap].rounds||1,last=S.cap>=CAP.length-1;
+h+=`<div class="res ${rs.ok?"w":"l"}"><h2>${rs.ok?(S.more?"Đạt ván "+(S.rd+1)+"/"+R_+"!":"Chiến thắng! 🏆"):"Chưa thành công"}</h2><p class="mu" style="margin-top:4px">${rs.ok?(S.more?"Chặng này cần thắng "+R_+" ván liên tiếp. Còn "+(R_-S.rd-1)+" ván nữa.":(last?"Bạn đã hoàn thành cả 18 chặng. Cảm ơn bạn đã đi cùng Hội Nhẫn!":"Cả nhóm cùng hoàn thành nhiệm vụ.")):"Chỉ cần một nhiệm vụ hỏng là cả nhóm thua"+(R_>1?" và phải làm lại từ ván đầu của chặng":"")+". Thử lại nhé!"}</p>
+<div class="lst" style="text-align:left">${rs.rows.map(r=>`<div class="li"><span><b>${nm(r.p)}</b> · ${CH[r.id].n}<br><span class="mu s">${CH[r.id].g}</span>${S.th[r.p]?`<br><span class="s" style="color:#eab08e">⚠ ${THR[S.th[r.p]].n}</span>`:""}</span><span class="${r.ok?"ok":"bad"}" style="white-space:nowrap">${r.ok?"✔ Đạt":"✖ Hỏng"}</span></div>`).join("")}</div>
+<div class="rr">${ok?`${rs.ok&&(S.more||!last)?`<button class="btn g" id="rn">${S.more?"Ván tiếp theo":"Chặng tiếp theo"}</button>`:""}<button class="btn ${rs.ok?"":"g"}" id="ra">${rs.ok?"Chơi lại chặng":"Thử lại chặng"}</button>${loc?`<button class="btn" id="rm">Chọn chặng khác</button>`:`<button class="btn" id="rl">Về phòng chờ</button>`}`:`<span class="mu">Chờ chủ phòng chọn bước tiếp theo…</span>`}</div></div>`}
+else if(pass){const q=loc?actor():mySeats().find(i=>S.pc[i]==null),done=S.pc.filter(x=>x!=null).length;h+=`<div class="tn ${!loc&&q!=null?"me":""}">${q!=null&&q>=0?`${!loc?"🎯 ":""}<b>${nm(q)}</b>: chọn 1 lá để chuyền úp cho <b>${nm((q+1)%S.pl.length)}</b>.`:`Đã chuyền xong. Chờ những người còn lại… (${done}/${S.pl.length})`}</div>`}
+else h+=`<div class="tn ${myTurn&&!loc?"me":""}">${myTurn?(loc?`Lượt của <b>${nm(S.tu)}</b>. Hãy chọn một lá bài.`:`🎯 Đến lượt bạn${S.hu&&S.hu.length==2?" ("+nm(S.tu)+")":""}! Chọn một lá bài hợp lệ.`):`Đang chờ <b>${nm(S.tu)}</b> đánh…`}</div>`;
+h+=`<p class="mu s" style="margin-bottom:6px">${esc(S.lg)}</p>`+chips()+`<div class="tbl"><div class="trick">${S.tr.length?S.tr.map(x=>`<div class="slot">${card(x.c,"big")}<span style="color:${PC[x.p]}">${nm(x.p)}</span>${x.w?"<br><b style='color:#f1d27b'>Dùng sức Nhẫn Chúa</b>":""}</div>`).join(""):`<p class="mu" style="align-self:center">${end?"Ván đã kết thúc.":pass?"Chuyền bài xong là bắt đầu chơi.":S.hist.length?"Lượt trước: "+nm(S.hist[S.hist.length-1].w)+" thắng. Người đó dẫn lượt này.":"Người dẫn đánh lá đầu tiên."}</p>`}</div></div>`+overview();
+if(!end){seats.forEach(i=>{if(i==null||i<0)return;const hand=S.h[i]||[],can=pass?S.pc[i]==null:(myTurn&&S.tu==i);h+=`<h3 style="margin:10px 0 0">Bài của ${loc||seats.length>1?nm(i):"bạn"}${pass&&S.pc[i]!=null?" <span class='mu s'>(đã chuyền)</span>":""}</h3>`;
+if(pend&&hand.includes(pend)&&can){if(pass)h+=`<div class="tn" style="border-color:var(--gold)">Chuyền lá <b>${SN[pend[0]]} ${pend.slice(1)}</b> cho ${nm((i+1)%S.pl.length)}? <div class="rr" style="justify-content:flex-start"><button class="btn g" id="pp" data-s="${i}">Chuyền lá này</button><button class="btn" id="px">Chọn lá khác</button></div></div>`;else h+=`<div class="tn" style="border-color:var(--gold)"><b>Nhẫn Chúa:</b> bạn có muốn dùng sức mạnh của nó để thắng lượt này không?<div class="rr" style="justify-content:flex-start"><button class="btn g" id="w1">Thắng chắc lượt này</button><button class="btn" id="w0">Chỉ coi là Nhẫn số 1</button><button class="btn" id="wx">Chọn lá khác</button></div></div>`}
+h+=`<div class="hand">${hand.map(c=>{const ok=pass?can&&c!="R1":can&&legal(S,i,c);return card(c,(can?(ok?"ok":"no"):"no")+(pend==c?" sel":""),"button",ok?"data-c='"+c+"'":"disabled")}).join("")}</div>`})}
+a.innerHTML=h;bindTop();
+const WHO=()=>loc?S.ctl[S.tu]:me;
+a.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{const c=b.dataset.c;if(pass||c=="R1"){pend=c;R()}else run(s=>doPlay(s,loc?s.ctl[s.tu]:me,c,false))});
+const w1=$("w1");if(w1){w1.onclick=()=>{const c=pend;run(s=>doPlay(s,loc?s.ctl[s.tu]:me,c,true))};$("w0").onclick=()=>{const c=pend;run(s=>doPlay(s,loc?s.ctl[s.tu]:me,c,false))};$("wx").onclick=()=>{pend=null;R()}}
+const pp=$("pp");if(pp){pp.onclick=()=>{const c=pend,q=+pp.dataset.s;run(s=>doPass(s,loc?s.ctl[q]:me,q,c))};$("px").onclick=()=>{pend=null;R()}}
+const ra=$("ra");if(ra)ra.onclick=()=>run(s=>again(s,me,false));const rn=$("rn");if(rn)rn.onclick=()=>run(s=>again(s,me,true));const rl=$("rl");if(rl)rl.onclick=()=>run(s=>toLobby(s,me));const rm=$("rm");if(rm)rm.onclick=()=>{loc=false;S=null;mode="setup";R()}}
+
+/* ---------- trực tuyến ---------- */
+async function loadFB(){if(FB)return;const[a,d]=await Promise.all([import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"),import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js")]);FB=d;db=d.getDatabase(a.initializeApp(CFG));d.onValue(d.ref(db,".info/serverTimeOffset"),s=>{off=s.val()||0})}
+function tx(fn){return FB.runTransaction(FB.ref(db,"fotr/"+code),c=>{const s=c&&c.j?JSON.parse(c.j):null;const r=fn(s);if(r==null)return r;return{j:JSON.stringify(r),ts:now(),n:r.pl.length,ph:r.phase}}).catch(e=>{const a=$("app");if(a)a.insertAdjacentHTML("afterbegin","<p class='eh' style='display:block'>⚠️ Lỗi kết nối: "+esc(e.message)+"</p>")})}
+async function enter(){const nm=$("nm").value.replace(/[<>&"'|]/g,"").trim().slice(0,14),rc=$("rc").value.toLowerCase().replace(/[^a-z0-9_-]/g,"").slice(0,20);
+if(!nm||!rc){const f=$(nm?"rc":"nm");f.classList.add("err");f.focus();return}
+myName=nm;code=rc;try{localStorage.setItem("fotr",JSON.stringify([nm,rc]))}catch(e){}
+mode="wait";R();
+try{await loadFB();sweep();seen=0;S=null;if(unsub)unsub();
+unsub=FB.onValue(FB.ref(db,"fotr/"+code),snap=>{const v=snap.val();if(v&&v.j){S=JSON.parse(v.j);if(!S.hu){S.hu=S.pl.slice();S.ctl=S.pl.map((_,i)=>i)}seen=1;mode="game"}else{if(seen)S=null;else return}R()},e=>{$("app").innerHTML=note("","Không đọc được dữ liệu phòng",esc(e.message)+"<br>Kiểm tra lại rules của Firebase cho nhánh fotr.",`<button class="btn g" id="bk">Về màn hình đầu</button>`);$("bk").onclick=leave});
+await tx(s=>joinG(s,myName))}catch(e){$("app").innerHTML=note("","Không kết nối được",esc(e.message),`<button class="btn g" id="bk">Thử lại</button>`);$("bk").onclick=leave}}
+function leave(){if(unsub){unsub();unsub=null}S=null;seen=0;mode="home";document.title="Hội Nhẫn: trò chơi ăn lượt hợp tác";tOn=0;R()}
+async function sweep(){try{const q=await FB.get(FB.query(FB.ref(db,"fotr"),FB.orderByChild("ts"),FB.endAt(now()-30*60000)));const ks=[];q.forEach(c=>{ks.push(c.key)});await Promise.all(ks.map(k=>FB.remove(FB.ref(db,"fotr/"+k))))}catch(e){}}
+setInterval(()=>{if(!loc&&mode=="game"&&S&&!document.hidden&&FB)tx(s=>s||undefined)},5*60000);
+
+/* ---------- hướng dẫn ---------- */
+const ex=arr=>`<div class="ex">${arr.map(([c,t])=>`<div>${card(c,"big")}${t}</div>`).join("")}</div>`;
+const GT=["Mục tiêu","Bộ bài","Chuẩn bị","Ăn lượt","Chất Nhẫn","Nhân vật","Quy tắc chặng","Chơi 2 người","Kết thúc","Cách dùng trang","Mẹo"];
+function guideSec(i){const sx=`<div class="sx">${SUITS.map(s=>`<span>${ico(s)}${SN[s]}${s=="R"?" (1–5)":" (1–8)"}</span>`).join("")}</div>`;
+return[
+`<h3>Mục tiêu của trò chơi</h3><p>Đây là trò chơi <b>hợp tác</b>: cả nhóm (3 hoặc 4 người) cùng chơi một phe, không ai đấu với ai. Mỗi người nhập vai một nhân vật và nhận một <b>nhiệm vụ riêng</b>, ví dụ "thắng đúng 2 lượt" hay "không thắng lượt nào".</p><p>Cả nhóm <b>thắng</b> khi mọi nhiệm vụ đều hoàn thành trong cùng một ván. Chỉ cần <b>một người hỏng nhiệm vụ</b> là cả nhóm thua và có thể chơi lại. Trò chơi có <b>18 chặng</b> đi theo hành trình của Hội Nhẫn, mỗi chặng thêm một quy tắc mới.</p><div class="tip">Bạn không cần biết trước các trò ăn lượt khác. Phần dưới sẽ giải thích từng bước, và chế độ "Chơi thử một mình" cho bạn xem toàn bộ bài để học.</div>`,
+`<h3>Bộ bài</h3><p>Bộ bài có <b>37 lá</b>, chia làm 5 chất:</p>${sx}<p>Mỗi lá có một con số (gọi là <b>hạng</b>). Số lớn hơn thì mạnh hơn, trừ một lá đặc biệt: <b>Nhẫn Chúa</b> (Nhẫn số 1), sẽ nói ở phần "Chất Nhẫn".</p>${ex([["H3","Đồi 3"],["M8","Núi 8"],["F5","Rừng 5"],["S2","Bóng tối 2"],["R1","Nhẫn Chúa"]])}`,
+`<h3>Chuẩn bị một ván</h3><ol><li>Một lá bài được lật ngửa đặt sang bên: đó là <b>lá thất lạc</b>, không ai chơi lá này. Mọi người đều thấy nó. (Nếu đó là Nhẫn Chúa, game tự bốc lại.)</li><li>Số bài còn lại chia đều: <b>3 người</b> mỗi người 12 lá, <b>4 người</b> mỗi người 9 lá. Bài trên tay giữ kín.</li><li>Ai nhận được <b>Nhẫn Chúa</b> sẽ vào vai <b>Frodo</b> và là người đánh lượt đầu tiên.</li><li>Lần lượt, những người còn lại <b>chọn một nhân vật</b> (bắt đầu từ người ngồi kế Frodo). Hãy nhìn bài trên tay để chọn nhiệm vụ mình dễ làm nhất.</li></ol><div class="tip">Nếu các nhiệm vụ được chọn không thể cùng hoàn thành (ví dụ ai cũng chỉ được thắng rất ít lượt), game sẽ báo và mọi người chọn lại.</div>`,
+`<h3>"Ăn lượt" là gì?</h3><p>Một ván gồm nhiều <b>lượt</b>. Mỗi lượt, mỗi người đánh ra đúng một lá, theo vòng quanh bàn. Ai <b>thắng lượt</b> thì thu về các lá đã đánh và được đánh lá đầu tiên của lượt kế tiếp.</p><ol><li><b>Dẫn:</b> người đầu tiên đánh một lá bất kỳ. Chất của lá đó là <b>chất dẫn</b>.</li><li><b>Theo chất:</b> những người sau phải đánh <b>cùng chất</b> với chất dẫn nếu có. Nếu hết chất đó, bạn được đánh lá nào cũng được.</li><li><b>Thắng:</b> sau khi mọi người đánh xong, ai đánh lá <b>số lớn nhất thuộc chất dẫn</b> thì thắng lượt.</li></ol><p><b>Ví dụ:</b> Gandalf dẫn bằng Đồi 4. Frodo có Đồi 7 và đánh nó. Sam hết Đồi nên đánh Núi 8. Lá Núi 8 tuy số lớn nhưng không cùng chất dẫn, nên <b>Frodo thắng</b> nhờ Đồi 7.</p>${ex([["H4","Gandalf dẫn"],["H7","Frodo theo chất"],["M8","Sam hết Đồi"]])}<p>Ván kết thúc khi mọi người hết bài trên tay (lá thất lạc thì bỏ ra ngoài).</p>`,
+`<h3>Chất Nhẫn: hai quy tắc đặc biệt</h3><p>Chất Nhẫn chỉ có 5 lá (1 đến 5) và có hai điều đặc biệt:</p><p><b>1. Chưa được dẫn Nhẫn ngay.</b> Cho đến khi có người đánh một lá Nhẫn vào một lượt <b>không phải lượt dẫn Nhẫn</b> (vì họ hết chất dẫn), không ai được dẫn bằng lá Nhẫn. Khi đó chất Nhẫn được "mở". Ngoại lệ: nếu tay bạn chỉ còn toàn lá Nhẫn thì bạn vẫn được dẫn. Trên trang có ô "Nhẫn: chưa được dẫn / đã mở" để bạn theo dõi.</p><p><b>2. Nhẫn Chúa (Nhẫn số 1).</b> Khi đánh lá này, bạn <b>được chọn</b>:</p><ul><li><b>Thắng chắc lượt đó</b>, bất kể những lá khác là gì, hoặc</li><li>Coi nó như một lá Nhẫn số 1 bình thường (rất yếu).</li></ul><p>Bạn vẫn phải đánh nó đúng luật theo chất như mọi lá khác. Chỉ riêng Nhẫn Chúa mới thắng được mọi thứ; các lá Nhẫn 2 đến 5 chỉ thắng thua như lá thường.</p>${ex([["H5","Người dẫn"],["H8","Theo chất"],["R1","Dùng sức Nhẫn Chúa"]])}<p>Ở ví dụ trên, người đánh Nhẫn Chúa (khi hết Đồi) chọn "thắng chắc", nên thắng lượt dù người kia đánh Đồi 8.</p>`,
+`<h3>Nhân vật và nhiệm vụ</h3><p>Nhiệm vụ của mọi người đều công khai, chỉ có bài trên tay là bí mật. Dưới đây là nhân vật trong trang này:</p><div class="lst">${Object.keys(CH).map(k=>`<div class="li"><span><b>${CH[k].n}</b> · ${CH[k].r}<br><span class="mu s">${CH[k].g}</span></span></div>`).join("")}</div><div class="tip"><b>Frodo</b> luôn thuộc về người giữ Nhẫn Chúa. Các nhiệm vụ có thể phụ thuộc vào nhau (ví dụ Sam cần thắng ngay sau Frodo), nên cả nhóm phải cùng tính toán.</div>`,
+`<h3>Quy tắc đặc biệt của từng chặng</h3><p>Càng về sau, mỗi chặng càng thêm quy tắc. Các quy tắc này luôn hiện ở đầu màn hình chơi:</p><ul><li><b>Bài Frodo để ngửa:</b> bài của người giữ Nhẫn Chúa được lật ngửa cho cả nhóm thấy. Giúp bạn làm quen ở các chặng đầu.</li><li><b>Nhẫn mở sẵn:</b> được dẫn bằng lá Nhẫn ngay từ lượt đầu.</li><li><b>Át chủ:</b> một chất được chọn làm át. Nếu có lá chất đó được đánh (dù không phải chất dẫn), lá át <b>lớn nhất</b> sẽ thắng, trừ khi có người dùng sức Nhẫn Chúa.</li><li><b>Đảo:</b> khi lượt do chất đó dẫn, lá <b>nhỏ nhất</b> của chất dẫn thắng thay vì lớn nhất.</li><li><b>Chuyền bài:</b> trước khi chơi, mỗi người chọn một lá và chuyền úp cho người kế tiếp (cùng lúc). Không được chuyền Nhẫn Chúa.</li><li><b>Mối đe dọa:</b> mỗi nhân vật (trừ Frodo) nhận thêm một điều cấm, ví dụ "không được thắng lượt cuối". Điều cấm hiện công khai và phải tuân thủ cùng nhiệm vụ.</li><li><b>Nhiều ván liên tiếp:</b> phải thắng 2 hoặc 3 ván liền nhau trong cùng một chặng. Thua một ván là làm lại từ ván đầu.</li></ul><h3 style="margin-top:14px">18 chặng</h3><div class="lst">${CAP.map((c,i)=>`<div class="li"><span><b>${i+1}. ${c.n}</b><br>${tags(c)||"<span class='mu s'>Luật cơ bản</span>"}</span></div>`).join("")}</div>`,
+`<h3>Chơi 2 người</h3><p>Khi chỉ có 2 người, mỗi người điều khiển <b>hai nhân vật</b>. Game chia bài như ván 4 người (mỗi nhân vật 9 lá, ván có 9 lượt). Các ghế xen kẽ nhau, ví dụ An cầm "An ①" và "An ②", Bình cầm "Bình ①" và "Bình ②", nên lượt đi luân phiên An, Bình, An, Bình.</p><ul><li><b>Bài:</b> bạn thấy bài của cả hai nhân vật mình cầm và không thấy bài của người kia.</li><li><b>Nhiệm vụ:</b> mỗi nhân vật có một nhiệm vụ riêng, nên bạn phải lo cho hai nhiệm vụ của mình đồng thời giúp người kia hoàn thành hai nhiệm vụ của họ.</li><li><b>Chọn nhân vật:</b> lần lượt từng ghế, ghế nào của bạn thì bạn chọn.</li><li><b>Chuyền bài</b> (ở các chặng có luật này): mỗi ghế chuyền một lá úp cho ghế kế tiếp, kể cả khi ghế kế tiếp là nhân vật còn lại của chính bạn.</li><li>Luật giao tiếp vẫn như cũ: không nói ra bài trên tay.</li></ul><div class="tip">Có 2 người nghĩa là có ít người để bàn bạc hơn nhưng bạn biết nhiều bài hơn. Hãy dùng hai nhân vật của mình để phối hợp với nhau.</div>`,
+`<h3>Kết thúc ván và thắng thua</h3><p>Khi mọi người hết bài, game kiểm tra từng nhiệm vụ (và mối đe dọa nếu có).</p><ul><li>Tất cả đều đạt: <b>cả nhóm thắng ván</b>. Nếu chặng chỉ có một ván thì sang chặng tiếp theo; nếu nhiều ván thì tiếp tục ván sau.</li><li>Có ít nhất một người không đạt: <b>cả nhóm thua</b>. Bạn có thể chơi lại cùng chặng với bài mới.</li></ul><h3 style="margin-top:14px">Không được nói về bài trên tay</h3><p>Luật quan trọng nhất của trò chơi hợp tác này: <b>không được nói hoặc cho xem bài trên tay</b>, và không bàn trước về việc chọn nhân vật. Bạn chỉ được nói về những gì ai cũng thấy: nhiệm vụ của mọi người, mối đe dọa, ai đã thắng mấy lượt, những lá đã đánh, lá thất lạc, và chất Nhẫn đã mở chưa.</p>`,
+`<h3>Cách dùng trang này</h3><ul><li><b>Số người:</b> trang hỗ trợ 2, 3 hoặc 4 người chơi trực tuyến.</li><li><b>Chơi thử một mình:</b> bạn điều khiển cả nhóm và thấy tất cả bài. Cách tốt nhất để hiểu luật mà không cần ai bên cạnh. Chặng nào đã hoàn thành sẽ có dấu ✔ (lưu trên máy bạn).</li><li><b>Chơi trực tuyến:</b> mỗi người vào cùng một mã phòng bằng điện thoại của mình. Chủ phòng chọn chặng và bấm Bắt đầu. Bài của ai người nấy thấy.</li><li><b>Lá bài sáng viền vàng</b> là lá bạn được phép đánh ở lượt này; lá mờ là không hợp lệ.</li><li>Đến lượt bạn, thanh <b>"Đến lượt bạn"</b> nhấp nháy và tiêu đề tab đổi thành 🔔.</li><li>Sau mỗi ván, chủ phòng chọn chơi lại hoặc sang chặng sau.</li><li>Phòng tự xóa sau 30 phút không có hoạt động.</li></ul>`,
+`<h3>Mẹo chơi</h3><ul><li><b>Đếm lượt:</b> ván 3 người có 12 lượt, ván 4 người có 9 lượt. Nhiệm vụ "thắng đúng N lượt" cần bạn biết lúc nào nên cố thắng, lúc nào nên nhường.</li><li><b>Nhường lượt cho đúng người:</b> đôi khi đánh lá thấp để người cần thắng giành được lượt.</li><li><b>Dùng lá thất lạc:</b> biết lá nào không có trong ván giúp bạn đoán lá cao nhất còn lại của một chất.</li><li><b>Nhẫn Chúa nên để dành:</b> dùng đúng lúc để cứu một nhiệm vụ, thay vì dùng sớm.</li><li><b>Chuyền bài có chủ đích:</b> chuyền lá thừa của mình cho người đang thiếu đúng chất họ cần, mà không nói ra.</li><li><b>Theo dõi tiến độ:</b> ô của mỗi người cho biết đã thắng mấy lượt.</li></ul>`][i]}
+function openGuide(t){gTab=t;const d=$("gd");drawGuide();if(!d.open)d.showModal()}
+function drawGuide(){$("gnv").innerHTML=GT.map((n,i)=>`<button class="${i==gTab?"on":""}" data-t="${i}">${i+1}. ${n}</button>`).join("");$("gbd").innerHTML=guideSec(gTab)+`<div class="rr" style="justify-content:space-between;margin-top:14px">${gTab>0?`<button class="btn" data-t="${gTab-1}">← Trước</button>`:"<span></span>"}${gTab<GT.length-1?`<button class="btn g" data-t="${gTab+1}">Tiếp →</button>`:`<button class="btn g" id="gx2">Đã hiểu</button>`}</div>`;
+$("gbd").scrollTop=0;document.querySelectorAll("#gnv [data-t],#gbd [data-t]").forEach(b=>b.onclick=()=>{gTab=+b.dataset.t;drawGuide()});const x=$("gx2");if(x)x.onclick=()=>$("gd").close()}
+$("gx").onclick=()=>$("gd").close();$("gd").addEventListener("click",e=>{if(e.target===$("gd"))$("gd").close()});
+R();
+</script>
+</body>
+</html>
