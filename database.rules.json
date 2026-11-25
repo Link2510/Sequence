@@ -1,0 +1,27 @@
+{
+  "rules": {
+    "rooms": {
+      ".indexOn": ["ts"],
+      ".read": true,
+      "$room": {
+        ".write": true
+      }
+    },
+    "rummikub": {
+      "rooms": {
+        ".indexOn": ["ts"],
+        ".read": true,
+        "$room": {
+          ".write": true
+        }
+      }
+    },
+    "fotr": {
+      ".indexOn": ["ts"],
+      ".read": true,
+      "$room": {
+        ".write": true
+      }
+    }
+  }
+}
