@@ -49,41 +49,60 @@ input:focus{border-color:var(--gold)}
 .drop{outline:3px dashed var(--gold);outline-offset:2px}
 .sel{padding:12px;border-radius:12px;font-size:15px;background:#123b31;color:#fff;border:2px solid rgba(255,255,255,.18)}
 .sc{margin:auto;border-collapse:collapse;min-width:70%}.sc th,.sc td{padding:9px 12px;text-align:center;border-bottom:1px solid rgba(255,255,255,.15)}.sc th{opacity:.7;font-size:13px}.sc tr.w td{background:rgba(245,196,81,.15)}
+.jk1{font-size:16px!important}.jk2,.jk3{font-size:22px!important}
+.exr{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0}.exr .ex{margin:0}.cap{font-size:13px;flex:1;min-width:180px}.ok{color:#8dffb0}.no{color:#ff9a9a}
 .t em{font:700 12px system-ui;font-style:normal;margin-top:-1px}
 .tm{font-weight:700;margin-left:8px}
 @media(max-width:640px){.home{grid-template-columns:1fr}.t{width:34px;height:48px;font-size:21px}.big .t{width:38px;height:54px;font-size:25px}}
-</style></head><body><a class="bg-home" href="https://boardgameace.web.app/" title="Về sảnh trò chơi" aria-label="Về sảnh trò chơi">← Sảnh trò chơi</a>
-<style>
-.bg-home{position:fixed;left:12px;bottom:12px;z-index:2147483647;display:inline-flex;align-items:center;padding:8px 12px;border-radius:999px;background:rgba(15,18,32,.82);color:#fff;text-decoration:none;font:600 13px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;border:1px solid rgba(255,255,255,.18);box-shadow:0 6px 18px rgba(0,0,0,.28);backdrop-filter:blur(6px)}
-.bg-home:hover,.bg-home:focus-visible{background:#242b55;color:#ffcc4d;outline:none}
-@media (prefers-color-scheme:light){.bg-home{background:rgba(255,255,255,.9);color:#1c2040;border-color:rgba(0,0,0,.15)}.bg-home:hover,.bg-home:focus-visible{color:#d98a00}}
-</style>
-<div id="app"></div>
+</style></head><body><div id="app"></div>
 <script>
 // ====== CẤU HÌNH ======  (đổi nếu Realtime Database của bạn có URL khác)
-const DB='https://sequence-23c7f-default-rtdb.asia-southeast1.firebasedatabase.app',B=DB+'/rummikub/rooms/';
+const DB='https://sequence-23c7f-default-rtdb.firebaseio.com',B=DB+'/rummikub/rooms/';
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let me=localStorage.rkid||(localStorage.rkid=Math.random().toString(36).slice(2,10)),name=localStorage.rkname||'',room=localStorage.rkroom||'',V='home',R=null,G=null,W=null,S=[],M='',es=null,L=0,RK=[],RKk=null,DG=null,JD=0,LS='',HL=[];const TTL=30*60000;
+let me=localStorage.rkid||(localStorage.rkid=Math.random().toString(36).slice(2,10)),name=localStorage.rkname||'',room=localStorage.rkroom||'',V='home',R=null,G=null,W=null,S=[],M='',es=null,L=0,RK=[],RKk=null,DG=null,JD=0,LS='',HL=[],RT=0;const TTL=30*60000;
 const api=(p,m='GET',b)=>fetch(B+p+'.json',{method:m,body:b===undefined?undefined:JSON.stringify(b)}).then(r=>r.json());
-const hv=a=>a.reduce((x,i)=>x+(i>103?30:i%13+1),0);
+const jt=i=>i<104?-1:i<106?0:i<108?1:i<110?2:3;
+const hv=a=>a.reduce((x,i)=>x+(i>103?(jt(i)==3?0:30):i%13+1),0);
 const TLS=[[0,'Không giới hạn'],[30,'30 giây'],[60,'60 giây'],[90,'90 giây'],[120,'2 phút'],[180,'3 phút']];
 const tlOpts=v=>TLS.map(([x,l])=>`<option value="${x}" ${(v||0)==x?'selected':''}>${l}</option>`).join('');
 const tlSel=h=>h?`<div class="row" style="justify-content:center"><span>⏱ Thời gian mỗi lượt</span><select onchange="setTL(this.value)" class="sel">${tlOpts(R.tl)}</select></div>`:`<p>⏱ Mỗi lượt: ${(TLS.find(x=>x[0]==(R.tl||0))||TLS[0])[1]}</p>`;
+const modeSel=h=>h?`<div class="row" style="justify-content:center"><span>🎮 Chế độ</span><select onchange="setMode(this.value)" class="sel"><option value="0" ${R.mode==2?'':'selected'}>Chuẩn</option><option value="2" ${R.mode==2?'selected':''}>Twist (joker đặc biệt)</option></select></div>`:`<p>🎮 Chế độ: ${R.mode==2?'Twist':'Chuẩn'}</p>`;
+function setMode(v){R.mode=+v;api(room,'PATCH',{mode:+v,t:Date.now()})}
 function setTL(v){R.tl=+v;api(room,'PATCH',{tl:+v,t:Date.now()})}
 const col=i=>i>103?4:(i%52)/13|0,num=i=>i%13+1;
-const T=(i,x='',v)=>`<div class="t c${col(i)} ${S.includes(i)?'sel':''} ${HL.includes(i)?'new':''} ${x}" data-i="${i}">${i>103?'☻'+(v?`<em>${v}</em>`:''):num(i)}<b></b></div>`;
+const JN=['Joker','Joker đôi (thay 2 quân)','Joker đổi màu','Joker gương'],JG=['☻','☻☻','🎨','🪞'];
+const T=(i,x='',v)=>`<div class="t c${col(i)} ${S.includes(i)?'sel':''} ${HL.includes(i)?'new':''} jk${jt(i)} ${x}" data-i="${i}"${i>103?` title="${JN[jt(i)]}"`:''}>${i>103?JG[jt(i)]+(v?`<em>${v}</em>`:''):num(i)}<b></b></div>`;
 const k=s=>s.slice().sort((a,b)=>a-b).join();
-function pts(s){const L=s.length;if(L<3)return 0;const f=s.filter(i=>i<104);if(!f.length)return 0;
- const ns=f.map(num),cs=f.map(col);
- if(L<=4&&ns.every(n=>n==ns[0])&&new Set(cs).size==cs.length)return ns[0]*L;
- if(new Set(cs).size==1&&new Set(ns).size==ns.length&&L<=13){let b=0;for(let a=1;a+L-1<=13;a++)if(ns.every(n=>n>=a&&n<=a+L-1))b=Math.max(b,(2*a+L-1)*L/2);return b}
- return 0}
-const arr=s=>{const f=s.filter(i=>i<104).sort((a,b)=>num(a)-num(b)||col(a)-col(b)),J=s.filter(i=>i>103);
- if(f.length&&J.length&&new Set(f.map(col)).size==1&&new Set(f.map(num)).size==f.length){let lo=num(f[0]),hi=num(f[f.length-1]);const j=J.slice(),o=[];
+function runPts(ns,j1,j2,N){const gs=[];for(let k=1;k<ns.length;k++)if(ns[k]-ns[k-1]>1)gs.push(ns[k]-ns[k-1]-1);
+ const lo=ns[0],hi=ns[ns.length-1];let best=0;
+ const ends=(a,b)=>{for(let a1=0;a1<=a;a1++)for(let b1=0;b1<=b;b1++){const ll=a1+2*b1,rr=a-a1+2*(b-b1);if(ll<=lo-1&&rr<=13-hi)best=Math.max(best,(lo-ll+hi+rr)*N/2)}};
+ const fg=(k,a,b)=>{if(k==gs.length)return ends(a,b);for(let y=0;y<=b&&2*y<=gs[k];y++){const x=gs[k]-2*y;if(x<=a)fg(k+1,a-x,b-y)}};
+ fg(0,j1,j2);return best}
+function ccrun(s){if(s.filter(i=>jt(i)==2).length!=1)return 0;const sl=[];let c=-1;
+ s.forEach(i=>{if(i<104)sl.push(i);else{if(jt(i)==2)c=sl.length;for(let k=0;k<(jt(i)==1?2:1);k++)sl.push(-1)}});
+ const N=sl.length;if(N>13)return 0;let a=null;
+ for(let k=0;k<N;k++)if(sl[k]>=0){const v=num(sl[k])-k;if(a===null)a=v;else if(a!=v)return 0}
+ if(a===null||a<1||a+N-1>13)return 0;const A=new Set(),B=new Set();sl.forEach((t,k)=>{if(t>=0)(k<c?A:B).add(col(t))});
+ if(A.size>1||B.size>1||(A.size&&B.size&&[...A][0]==[...B][0]))return 0;return(2*a+N-1)*N/2}
+function mir(s){if(s.filter(i=>jt(i)==3).length!=1||s.some(i=>jt(i)==1||jt(i)==2))return 0;
+ const m=s.findIndex(i=>jt(i)==3),l=s.slice(0,m),q=s.slice(m+1).reverse();if(!l.length||l.length!=q.length)return 0;const L=[];
+ for(let k=0;k<l.length;k++){const a=l[k],b=q[k];if(a<104&&b<104){if(a%52!=b%52)return 0;L.push(a)}else if(a<104)L.push(a);else if(b<104)L.push(b);else return 0}
+ const ns=L.map(num),cs=L.map(col);let ok=false;
+ if(ns.every(x=>x==ns[0])&&new Set(cs).size==L.length)ok=true;
+ else if(new Set(cs).size==1){const d=ns[1]-ns[0];ok=(d==1||d==-1)&&ns.every((x,k)=>x==ns[0]+d*k)}
+ return ok?2*ns.reduce((x,y)=>x+y,0):0}
+function pts(s){const L=s.length;if(L<3)return 0;if(s.some(i=>jt(i)==3))return mir(s);if(s.some(i=>jt(i)==2))return ccrun(s);
+ const f=s.filter(i=>i<104),j1=s.filter(i=>jt(i)==0).length,j2=s.filter(i=>jt(i)==1).length;if(!f.length)return 0;
+ const N=f.length+j1+2*j2,ns=f.map(num),cs=f.map(col);
+ if(N<=4&&ns.every(n=>n==ns[0])&&new Set(cs).size==cs.length)return ns[0]*N;
+ if(new Set(cs).size!=1||new Set(ns).size!=ns.length||N>13)return 0;
+ return runPts(ns.sort((x,y)=>x-y),j1,j2,N)}
+const arr=s=>{if(s.some(i=>jt(i)>=2))return s;const f=s.filter(i=>i<104).sort((a,b)=>num(a)-num(b)||col(a)-col(b)),J=s.filter(i=>i>103);
+ if(f.length&&J.length&&J.every(i=>jt(i)==0)&&new Set(f.map(col)).size==1&&new Set(f.map(num)).size==f.length){let lo=num(f[0]),hi=num(f[f.length-1]);const j=J.slice(),o=[];
   for(let n=lo;n<=hi;n++){const t=f.find(i=>num(i)==n);o.push(t!=null?t:j.shift())}
   if(!o.includes(undefined)){while(j.length){if(hi<13){o.push(j.shift());hi++}else{o.unshift(j.shift());lo--}}return o}}
  return f.concat(J)};
-function jv(s){const o={};if(!pts(s)||!s.some(i=>i>103))return o;const f=s.filter(i=>i<104);if(f.length<2)return o;
+function jv(s){const o={};if(s.some(i=>jt(i)>0)||!pts(s)||!s.some(i=>i>103))return o;const f=s.filter(i=>i<104);if(f.length<2)return o;
  if(f.every(i=>num(i)==num(f[0]))){s.forEach((i,k)=>{if(i>103)o[k]=num(f[0])});return o}
  const k0=s.findIndex(i=>i<104),st=num(s[k0])-k0;if(s.every((i,k)=>i>103||num(i)==st+k))s.forEach((i,k)=>{if(i>103)o[k]=st+k});return o}
 const myTurn=()=>G&&!G.w&&G.o[G.t]==me;
@@ -108,12 +127,12 @@ async function pull(){if(!room||L)return;let r;try{r=await api(room)}catch(e){re
 const mkW=()=>({v:G.v,k:G.k,rack:G.h[me].slice(),tb:G.tb.map(s=>s.slice()),orig:G.h[me].slice()});
 function setup(){if(G&&myTurn()&&(!W||W.v!=G.v||W.k!=G.k)){W=mkW();S=[]}}
 function leave(){if(es)es.close();if(!L&&R&&!R.g&&room){if(R.h==me)api(room,'DELETE');else api(room+'/p/'+me,'DELETE')}if(!L)localStorage.rkroom='';L=0;LS='';room='';R=G=W=null;S=[];V='home';render()}
-function mkGame(ids,pv,tl){ids=ids.slice().sort(()=>Math.random()-.5);const d=[...Array(106).keys()].sort(()=>Math.random()-.5);const h={};ids.forEach(i=>h[i]=d.splice(0,14));
- const sc={};ids.forEach(i=>sc[i]=(pv&&pv.sc&&pv.sc[i])||0);
- return {o:ids,h,pool:d,tb:[],m:{},t:0,v:1,k:Date.now(),w:null,log:'Ván mới bắt đầu!',sc,r:(pv&&pv.r||0)+1,tl:tl||0,dl:tl?Date.now()+tl*1000:0}}
-async function start(){const g=mkGame(Object.keys(R.p),G,R.tl);HL=[];if(L){G=g;W=null;tick()}else await api(room,'PATCH',{g:JSON.stringify(g),s:'play',t:Date.now()})}
+function mkGame(ids,pv,tl,md){ids=ids.slice().sort(()=>Math.random()-.5);const d=[...Array(md==2?112:106).keys()].sort(()=>Math.random()-.5);const h={};ids.forEach(i=>h[i]=d.splice(0,14));
+ if(pv&&(pv.mode||0)!=(md||0))pv=null;const sc={};ids.forEach(i=>sc[i]=(pv&&pv.sc&&pv.sc[i])||0);
+ return {o:ids,h,pool:d,tb:[],m:{},t:0,v:1,k:Date.now(),w:null,log:'Ván mới bắt đầu!',sc,r:(pv&&pv.r||0)+1,mode:md||0,tl:tl||0,dl:tl?Date.now()+tl*1000:0}}
+async function start(){const g=mkGame(Object.keys(R.p),G,R.tl,R.mode);HL=[];if(L){G=g;W=null;tick()}else await api(room,'PATCH',{g:JSON.stringify(g),s:'play',t:Date.now()})}
 function bot(){name=$('#nm').value.trim();if(!name)return msg('Nhập tên của bạn trước nhé');localStorage.rkname=name;
- if(es)es.close();L=1;G=null;room='MAY';V='game';M='';R={h:me,s:'play',tl:+$('#tl2').value,p:{[me]:name}};for(let i=1;i<=+$('#nb').value;i++)R.p['b'+i]='🤖 Máy '+i;start()}
+ if(es)es.close();L=1;G=null;room='MAY';V='game';M='';R={h:me,s:'play',mode:+$('#md').value,tl:+$('#tl2').value,p:{[me]:name}};for(let i=1;i<=+$('#nb').value;i++)R.p['b'+i]='🤖 Máy '+i;start()}
 function tick(){S=[];setup();render();if(L&&G&&!G.w&&G.o[G.t]!=me)setTimeout(botMove,500)}
 async function cleanup(){try{const ks=await fetch(B.slice(0,-1)+'.json?shallow=true').then(r=>r.json());for(const c in ks||{}){const t=await api(c+'/t');if(!t||Date.now()-t>TTL)api(c,'DELETE')}}catch(e){}}
 /* ---------- máy chơi ---------- */
@@ -141,7 +160,7 @@ const push=()=>{G.v++;if(L)tick();else api(room,'PATCH',{g:JSON.stringify(G),t:D
 /* ---------- thao tác ---------- */
 function rm(ids){W.rack=W.rack.filter(i=>!ids.includes(i));W.tb=W.tb.map(s=>s.filter(i=>!ids.includes(i)))}
 function act(a,x){M='';HL=[];
- if(a=='home'){V='home'}else if(a=='rules'){V='rules'}else if(a=='create')return create();else if(a=='bot')return bot();else if(a=='join')return join();else if(a=='leave')return leave();else if(a=='start')return start();
+ if(a=='home'){V='home'}else if(a=='rules'){V='rules';RT=0}else if(a=='rulesT'){V='rules';RT=1}else if(a=='create')return create();else if(a=='bot')return bot();else if(a=='join')return join();else if(a=='leave')return leave();else if(a=='start')return start();
  else if(a=='copy'){navigator.clipboard&&navigator.clipboard.writeText(room);M='Đã chép mã phòng '+room}
  else if(a=='new'&&S.length){const s=S.slice();rm(s);W.tb.push(arr(s));W.tb=W.tb.filter(q=>q.length);S=[]}
  else if(a=='add'&&S.length){const s=S.slice(),n=+x;rm(s);W.tb[n].push(...s);W.tb=W.tb.filter(q=>q.length).map(arr);S=[]}
@@ -179,26 +198,43 @@ function home(){return `<div class="hero">${logo()}<p>Xếp bài, ghép bộ, h�
 <div class="home"><div class="card stack full"><h3>Tên của bạn</h3><input id="nm" maxlength="14" placeholder="VD: Minh" value="${esc(name)}"></div>
 <div class="card stack"><h3>🏠 Tạo phòng mới</h3><p style="opacity:.75;font-size:14px">Bạn là chủ phòng, gửi mã phòng cho bạn bè.</p><button class="btn" data-a="create">Tạo phòng</button></div>
 <div class="card stack"><h3>🔑 Vào phòng</h3><input id="cd" maxlength="4" placeholder="Mã 4 ký tự" style="text-transform:uppercase;letter-spacing:4px"><button class="btn" data-a="join">Vào phòng</button></div>
-<div class="card row full" style="justify-content:space-between"><div><h3>🤖 Chơi với máy</h3><p style="opacity:.75;font-size:14px">Không cần mạng, luyện tay trước khi gặp bạn bè.</p></div><div class="row"><select id="tl2" class="sel" title="Thời gian mỗi lượt">${tlOpts(0)}</select><select id="nb" style="padding:12px;border-radius:12px;font-size:15px;background:#123b31;color:#fff;border:2px solid rgba(255,255,255,.18)"><option value="1">1 máy</option><option value="2">2 máy</option><option value="3">3 máy</option></select><button class="btn" data-a="bot">Chơi ngay</button></div></div>
+<div class="card row full" style="justify-content:space-between"><div><h3>🤖 Chơi với máy</h3><p style="opacity:.75;font-size:14px">Không cần mạng, luyện tay trước khi gặp bạn bè.</p></div><div class="row"><select id="md" class="sel" title="Chế độ"><option value="0">Chuẩn</option><option value="2">Twist</option></select><select id="tl2" class="sel" title="Thời gian mỗi lượt">${tlOpts(0)}</select><select id="nb" style="padding:12px;border-radius:12px;font-size:15px;background:#123b31;color:#fff;border:2px solid rgba(255,255,255,.18)"><option value="1">1 máy</option><option value="2">2 máy</option><option value="3">3 máy</option></select><button class="btn" data-a="bot">Chơi ngay</button></div></div>
 <div class="full" style="text-align:center"><button class="btn g" data-a="rules">📖 Hướng dẫn chơi</button>${toast()}<p style="opacity:.55;font-size:13px;margin-top:8px">Phòng online tự xoá sau 30 phút không hoạt động.</p></div></div>`}
 function lobby(){const ids=Object.keys(R.p),host=R.h==me;
  return `<div class="top"><button class="btn g s" data-a="leave">← Rời phòng</button><div class="code" data-a="copy" style="cursor:pointer" title="Bấm để chép">${room}</div></div>
 <div class="card stack" style="text-align:center">${logo()}<h2>Phòng chờ</h2><p style="opacity:.8">Gửi mã phòng <b>${room}</b> cho bạn bè (tối đa 4 người).</p>
 <div class="pl" style="justify-content:center">${ids.map(i=>`<div class="pill ${i==R.h?'on':''}">${i==R.h?'👑 ':''}${nm(i)}${i==me?' (bạn)':''}</div>`).join('')}</div>
-${tlSel(host)}
+${modeSel(host)}${R.mode==2?'<div><button class="btn g s" data-a="rulesT">📖 Hướng dẫn Twist</button></div>':''}${tlSel(host)}
 ${host?`<button class="btn" data-a="start" ${ids.length<2?'disabled style="opacity:.5"':''}>Bắt đầu ván chơi</button>${ids.length<2?'<p style="opacity:.7;font-size:14px">Cần ít nhất 2 người</p>':''}`:'<p>Đang chờ chủ phòng bắt đầu…</p>'}${toast()}</div>`}
 function game(){const mt=myTurn(),tb=mt?W.tb:G.tb,rack=mt?W.rack:G.h[me];
  if(G.w)return `<div class="card win"><h2>🏆 ${nm(G.w)} chiến thắng!</h2><p style="opacity:.8;margin:6px 0 14px">${esc(G.log||'')} · Ván ${G.r}</p><table class="sc"><tr><th></th><th>Người chơi</th><th>Quân còn</th><th>Điểm ván</th><th>Tổng</th></tr>${G.o.slice().sort((a,b)=>G.sc[b]-G.sc[a]).map(i=>`<tr class="${i==G.w?'w':''}"><td>${i==G.w?'🏆':''}</td><td>${nm(i)}</td><td>${G.h[i].length} (${hv(G.h[i])}đ)</td><td>${G.rd[i]>0?'+':''}${G.rd[i]}</td><td><b>${G.sc[i]}</b></td></tr>`).join('')}</table><p style="margin:14px 0 20px;opacity:.6;font-size:13px">Người thắng nhận tổng điểm quân còn lại của các người chơi khác (Joker = 30), người thua bị trừ điểm quân còn lại của mình.</p>
  <div class="row" style="justify-content:center">${R.h==me?'<button class="btn" data-a="start">Chơi ván mới</button>':'<span>Chờ chủ phòng mở ván mới…</span>'}<button class="btn g" data-a="leave">Rời phòng</button></div></div>`;
- return `<div class="top"><button class="btn g s" data-a="leave">← Rời</button><div class="code">${L?'🤖 CHƠI VỚI MÁY':room}</div><button class="btn g s" data-a="rules">📖 Luật</button></div>
-<div class="pl">${G.o.map((i,x)=>`<div class="pill ${x==G.t?'on':''}">${x==G.t?'▶ ':''}${nm(i)}${i==me?' (bạn)':''} · ${G.h[i].length} quân ${G.m[i]?'✓':''}${G.r>1?` · ${G.sc[i]}đ`:''}</div>`).join('')}<div class="pill">🎴 Còn ${G.pool.length}</div></div>
+ return `<div class="top"><button class="btn g s" data-a="leave">← Rời</button><div class="code">${L?'🤖 CHƠI VỚI MÁY':room}</div><button class="btn g s" data-a="${G.mode==2?'rulesT':'rules'}">📖 Luật</button></div>
+<div class="pl">${G.o.map((i,x)=>`<div class="pill ${x==G.t?'on':''}">${x==G.t?'▶ ':''}${nm(i)}${i==me?' (bạn)':''} · ${G.h[i].length} quân ${G.m[i]?'✓':''}${G.r>1?` · ${G.sc[i]}đ`:''}</div>`).join('')}<div class="pill">🎴 Còn ${G.pool.length}</div><div class="pill">${G.mode==2?'🌀 Twist':'Chuẩn'}</div></div>
 <div class="log">${esc(G.log||'')} — ${mt?'<b style="color:#f5c451">Đến lượt bạn!</b>':'lượt của '+nm(G.o[G.t])}${G.tl?' <span id="tm" class="tm"></span>':''}</div>
 <div class="board">${tb.length?tb.map((s,x)=>{const p=pts(s);return `<div class="set ${p?'':'bad'}${mt?'':' '}"><small>${p||'✗'}</small>${(v=>s.map((i,x)=>T(i,'',v[x])).join(''))(jv(s))}${mt?`<button class="add" data-a="add" data-k="${x}">+</button>`:''}</div>`}).join(''):'<div class="empty">Bàn chơi đang trống</div>'}</div>
 <div class="rack mine">${ord(rack).map(i=>T(i)).join('')||'<span style="opacity:.6">Hết bài</span>'}</div>
 ${mt?`<div class="acts"><button class="btn" data-a="new">＋ Nhóm mới</button><button class="btn g" data-a="ret">↩ Trả về giá</button><button class="btn g" data-a="undo">Hoàn tác</button><button class="btn g" data-a="s1">Sắp theo số</button><button class="btn g" data-a="s2">Sắp theo màu</button><span style="flex:1"></span><button class="btn" data-a="end">✔ Kết thúc lượt</button><button class="btn g" data-a="draw">Rút bài</button></div>
 <p style="opacity:.65;font-size:13px;margin-top:8px">Kéo thả quân bài vào bàn (tạo nhóm mới), vào giữa/cuối một nhóm, hoặc sắp xếp lại giá. Cũng có thể bấm chọn quân rồi dùng nút “Nhóm mới” / “+”.</p>`:''}${toast()}`}
+function twistRules(){const X=(a,t)=>{const p=pts(a);return `<div class="exr"><div class="ex">${a.map(i=>T(i)).join('')}</div><div class="cap ${p?'ok':'no'}">${p?'✓ '+p+' điểm':'✗ Không hợp lệ'} — ${t}</div></div>`};
+ return `<h3>🌀 Rummikub Twist là gì?</h3><p>Chế độ riêng, chọn khi tạo phòng (hoặc khi chơi với máy). Luật chung giống chế độ Cơ bản: 14 quân mỗi người, lần đầu đặt ≥ 30 điểm, sắp xếp lại bàn tự do. Điểm khác biệt là bộ bài có <b>112 quân</b>: 104 quân số và <b>8 joker</b>, mỗi loại 2 quân.</p>
+<table class="sc" style="margin:10px 0"><tr><th>Quân</th><th>Tên</th><th>Thay cho</th><th>Điểm phạt cuối ván</th></tr>
+<tr><td>☻</td><td>Joker thường</td><td>1 quân bất kỳ</td><td>30</td></tr>
+<tr><td>☻☻</td><td>Joker đôi</td><td>2 quân cùng lúc</td><td>30</td></tr>
+<tr><td>🎨</td><td>Joker đổi màu</td><td>1 quân, và đổi màu dãy</td><td>30</td></tr>
+<tr><td>🪞</td><td>Joker gương</td><td>không thay quân nào</td><td>0</td></tr></table>
+<h3>☻☻ Joker đôi</h3><ul><li><b>Trong dãy:</b> thay cho 2 số liên tiếp cùng màu.</li><li><b>Trong bộ:</b> thay cho 2 màu còn thiếu, nên cần 2 quân thật khác màu đi kèm (bộ ba quân nhưng đủ 4 màu).</li><li>Không dùng được nếu 2 số nó thay rơi ra ngoài 1–13.</li></ul>
+${X([2,3,106,6],'đỏ 3, đỏ 4, ☻☻ thay đỏ 5 và đỏ 6, rồi đỏ 7')}${X([15,28,106],'xanh 3, cam 3, ☻☻ thay đỏ 3 và đen 3')}${X([15,67,106],'hai quân 3 cùng màu xanh không tạo được bộ')}
+<h3>🎨 Joker đổi màu</h3><ul><li>Chỉ dùng trong <b>dãy</b>, chiếm đúng 1 số trong dãy.</li><li>Các quân <b>trước</b> nó cùng một màu; các quân <b>sau</b> nó phải cùng một màu <b>khác</b>.</li><li>Đặt ở cuối nhóm thì nó chỉ như joker thường (không bắt buộc đổi màu).</li><li>Mỗi nhóm chỉ có 1 joker đổi màu.</li></ul>
+${X([2,3,108,18],'đỏ 3, đỏ 4, 🎨 thay số 5, rồi xanh 6')}${X([2,3,108,5],'hai phía cùng màu đỏ, phải khác màu')}${X([2,108,3,18],'sai thứ tự: 🎨 chiếm số 4 nên quân sau phải là số 5')}${X([2,3,4,108],'🎨 ở cuối, thay đỏ 6')}
+<h3>🪞 Joker gương</h3><ul><li>Giá trị <b>0</b>. Hai bên joker phải <b>đối xứng</b>: cùng số quân, quân phản chiếu nhau (cùng số, cùng màu).</li><li>Một bên là dãy tăng dần hướng về gương (hoặc giảm dần), hoặc là bộ cùng số khác màu.</li><li>Joker thường có thể thay cho một quân ở một bên (không đặt hai joker thường đối diện nhau).</li><li>Mỗi nhóm chỉ có 1 joker gương, không đi chung với joker đôi hay đổi màu.</li></ul>
+${X([1,2,110,54,53],'dãy đỏ 2, 3 | 🪞 | đỏ 3, 2')}${X([2,15,110,67,54],'bộ số 3: đỏ, xanh | 🪞 | xanh, đỏ')}${X([4,110,56],'nhỏ nhất: đỏ 5, 🪞, đỏ 5')}${X([1,2,110,104,53],'joker thường thay đỏ 3 ở bên phải')}${X([1,2,110,53,54],'không phản chiếu: bên phải phải là 3 rồi 2')}${X([1,2,110,53],'hai bên lệch số quân')}
+<h3>🖐 Cách làm trên web</h3><p>Với 🎨 và 🪞, <b>thứ tự</b> quân quan trọng nên web không tự sắp xếp. Hãy dùng kéo thả: thả lên <b>nửa phải</b> của một quân để chèn ngay <b>sau</b> quân đó, nửa trái để chèn <b>trước</b>.</p>
+<p><b>Ví dụ dựng dãy đỏ 3, đỏ 4, 🎨, xanh 6:</b></p><ol><li>Kéo đỏ 3 từ giá ra chỗ trống trên bàn để tạo nhóm mới.</li><li>Kéo đỏ 4 thả vào nửa phải của đỏ 3.</li><li>Kéo 🎨 thả vào nửa phải của đỏ 4.</li><li>Kéo xanh 6 thả vào nửa phải của 🎨.</li><li>Nhóm hợp lệ sẽ hiện điểm ở góc rồi bạn bấm “Kết thúc lượt”.</li></ol>
+<p><b>Ví dụ dựng gương đỏ 2, đỏ 3, 🪞, đỏ 3, đỏ 2:</b> tạo nhóm bằng đỏ 2, rồi lần lượt thả đỏ 3, 🪞, đỏ 3, đỏ 2 vào nửa phải quân vừa đặt. Đủ cả hai bên thì điểm mới hiện.</p>
+<h3>⚠ Lỗi hay gặp</h3><ul><li>Nhóm viền đỏ ✗: kiểm tra thứ tự, 🎨 và 🪞 chỉ đúng khi quân ở đúng vị trí.</li><li>Gương lệch một quân hoặc ngược thứ tự bên phải.</li><li>Lần đầu: joker đặc biệt tính theo số nó thay (gương = 0), nên dãy dùng 🪞 khó đủ 30 điểm.</li><li>Máy chơi chưa biết dùng joker đặc biệt.</li></ul>`}
 function rules(){const ex=(a)=>`<div class="ex">${a.map(i=>T(i)).join('')}</div>`;
- return `<div class="top"><button class="btn g s" data-a="${room?'leaveRules':'home'}" onclick="V='${room?'game':'home'}';render()">← Quay lại</button></div><div class="card rules"><h2>📖 Hướng dẫn chơi Rummikub</h2>
+ return `<div class="top"><button class="btn g s" data-a="${room?'leaveRules':'home'}" onclick="V='${room?'game':'home'}';render()">← Quay lại</button></div><div class="card rules"><h2>📖 Hướng dẫn chơi Rummikub</h2><div class="row" style="margin:10px 0"><button class="btn ${RT?'g':''}" onclick="RT=0;render()">Cơ bản</button><button class="btn ${RT?'':'g'}" onclick="RT=1;render()">🌀 Chế độ Twist</button></div><div ${RT?'hidden':''}>
 <h3>Mục tiêu</h3><p>Là người đầu tiên đánh hết quân bài trên giá của mình.</p>
 <h3>Bộ bài</h3><p>106 quân: số 1–13 với 4 màu (đỏ, xanh dương, cam, đen), mỗi loại 2 quân, thêm 2 quân <b>Joker ☻</b>. Mỗi người nhận 14 quân; phần còn lại là bài rút.</p>
 <h3>Nhóm hợp lệ (ít nhất 3 quân)</h3><ul><li><b>Dãy:</b> các số liên tiếp, cùng màu. Ví dụ 4-5-6 cùng màu. (Không nối vòng 13→1)</li><li><b>Bộ:</b> cùng một số, khác màu nhau, tối đa 4 quân. Ví dụ ba số 7 ba màu khác nhau.</li></ul>
@@ -207,7 +243,7 @@ function rules(){const ex=(a)=>`<div class="ex">${a.map(i=>T(i)).join('')}</div>
 <h3>Lượt chơi</h3><ul><li>Bạn có thể đặt quân từ giá của mình ra bàn, tạo nhóm mới hoặc thêm vào nhóm có sẵn.</li><li>Bạn được sắp xếp lại các nhóm trên bàn (tách, ghép, đổi chỗ) miễn là cuối lượt <b>mọi nhóm đều hợp lệ</b> và không quân nào trên bàn bị lấy về giá.</li><li>Không có gì để đặt? Bấm <b>Rút bài</b> (lấy 1 quân và hết lượt).</li></ul>
 <h3>Lần đặt đầu tiên: ≥ 30 điểm</h3><p>Lần đầu, các nhóm bạn đặt ra phải có tổng điểm từ 30 trở lên (tính theo số trên quân; joker tính bằng quân nó thay), và chỉ dùng bài của mình, chưa được động vào bài trên bàn.</p>
 <h3>Tính điểm</h3><p>Khi có người hết bài, mỗi người còn lại bị trừ điểm các quân còn trên giá (Joker tính 30 điểm) và người thắng được cộng tổng số điểm đó. Điểm cộng dồn qua các ván trong cùng một phòng. Nếu hết bài rút mà không ai đi được, người có ít điểm nhất thắng.</p><h3>Thời gian mỗi lượt</h3><p>Chủ phòng chọn thời gian mỗi lượt (hoặc không giới hạn). Hết giờ, bài bạn sắp dở bị huỷ, bạn rút 1 quân và đến lượt người kế.</p><h3>Cách thao tác trên web</h3><ul><li><b>Kéo thả</b> quân bài: thả vào chỗ trống trên bàn để tạo nhóm mới, thả lên một quân để chèn vào nhóm đó, thả vào giá để sắp xếp.</li><li>Hoặc bấm vào quân để chọn (có thể chọn nhiều quân, kể cả quân trên bàn).</li><li><b>＋ Nhóm mới</b>: gom các quân đang chọn thành một nhóm mới.</li><li><b>＋</b> cạnh nhóm: thêm quân đang chọn vào nhóm đó.</li><li>Số nhỏ ở góc nhóm là điểm của nhóm; viền đỏ ✗ là nhóm chưa hợp lệ.</li><li><b>Hoàn tác</b> đưa mọi thứ về đầu lượt; <b>Kết thúc lượt</b> sẽ kiểm tra luật.</li></ul>
-<div style="text-align:center;margin-top:20px"><button class="btn" onclick="V='${room?'game':'home'}';render()">Đã hiểu, chơi thôi!</button></div></div>`}
+</div>${RT?twistRules():''}<div style="text-align:center;margin-top:20px"><button class="btn" onclick="V='${room?'game':'home'}';render()">Đã hiểu, chơi thôi!</button></div></div>`}
 function ord(a){if(G&&RKk!=G.k){RK=[];RKk=G.k}const o=a.slice().sort((p,q)=>(RK.indexOf(p)+1||1e6)-(RK.indexOf(q)+1||1e6));RK=RK.concat(a.filter(i=>!RK.includes(i)));return o}
 function target(el,x){if(!el)return null;const t=el.closest('.t[data-i]'),st=el.closest('.set'),rk=el.closest('.rack');
  if(t&&(st||rk)){const b=t.getBoundingClientRect();return {k:st?'set':'rack',ref:+t.dataset.i,after:x>b.left+b.width/2,el:st||rk}}
