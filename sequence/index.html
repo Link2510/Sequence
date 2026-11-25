@@ -120,7 +120,13 @@ main:has(#gl){max-width:1180px}
 #hd button{width:62px;height:86px;padding:0;background:none;border:0;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,.35);transition:transform .15s}
 #hd button.r{color:#c62828}#hd button.s{transform:translateY(-8px);outline:3px solid var(--ok)}
 .pl{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd)}
-</style></head><body><main><h1>Sequence</h1><div id="app"></div></main>
+</style></head><body><a class="bg-home" href="https://boardgameace.web.app/" title="Về sảnh trò chơi" aria-label="Về sảnh trò chơi">← Sảnh trò chơi</a>
+<style>
+.bg-home{position:fixed;left:12px;bottom:12px;z-index:2147483647;display:inline-flex;align-items:center;padding:8px 12px;border-radius:999px;background:rgba(15,18,32,.82);color:#fff;text-decoration:none;font:600 13px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;border:1px solid rgba(255,255,255,.18);box-shadow:0 6px 18px rgba(0,0,0,.28);backdrop-filter:blur(6px)}
+.bg-home:hover,.bg-home:focus-visible{background:#242b55;color:#ffcc4d;outline:none}
+@media (prefers-color-scheme:light){.bg-home{background:rgba(255,255,255,.9);color:#1c2040;border-color:rgba(0,0,0,.15)}.bg-home:hover,.bg-home:focus-visible{color:#d98a00}}
+</style>
+<main><h1>Sequence</h1><div id="app"></div></main>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import{getDatabase,ref,onValue,runTransaction,query,orderByChild,limitToLast,endAt,get,remove}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
