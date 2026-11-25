@@ -47,6 +47,17 @@ firebase deploy --only database --project sequence-23c7f
 
 GitHub Actions hiện chỉ deploy hosting; rules không tự deploy khi push `main`.
 
+### Sau khi đè file game mới
+
+File tải về thường **không có** nút "← Sảnh trò chơi". Chạy script này rồi mới deploy:
+
+```powershell
+cd G:\AI\web\sequence\Sequence
+powershell -ExecutionPolicy Bypass -File .\patch-back-button.ps1
+```
+
+Script chỉ thêm nút vào file nào chưa có; file đã có thì bỏ qua. Rummikub cũng cần giữ host database đúng (`...asia-southeast1.firebasedatabase.app`) — nếu file mới dùng `...firebaseio.com` thì sửa lại trước khi deploy.
+
 ### Gói miễn phí (Spark)
 
 Không cần nâng cấp: cùng một project `sequence-23c7f` đang dùng, Firebase cho phép tối đa 36 site trên mỗi project, dùng chung hạn mức 10 GB lưu trữ và 360 MB truyền tải/ngày. Toàn bộ website hiện nặng khoảng 125 KB nên cách rất xa hạn mức. Không dùng custom domain hay tính năng trả phí.

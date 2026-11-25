@@ -12,6 +12,7 @@
         "**/node_modules/**",
         "README.md",
         "database.rules.json",
+        "*.ps1",
         "legacy/**"
       ],
       "headers": [
