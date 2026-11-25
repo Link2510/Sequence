@@ -62,7 +62,7 @@ input:focus{border-color:var(--gold)}
 </style><div id="app"></div>
 <script>
 // ====== CẤU HÌNH ======  (đổi nếu Realtime Database của bạn có URL khác)
-const DB='https://sequence-23c7f-default-rtdb.firebaseio.com',B=DB+'/rummikub/rooms/';
+const DB='https://sequence-23c7f-default-rtdb.asia-southeast1.firebasedatabase.app',B=DB+'/rummikub/rooms/';
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let me=localStorage.rkid||(localStorage.rkid=Math.random().toString(36).slice(2,10)),name=localStorage.rkname||'',room=localStorage.rkroom||'',V='home',R=null,G=null,W=null,S=[],M='',es=null,L=0,RK=[],RKk=null,DG=null,JD=0,LS='',HL=[],RT=0;const TTL=30*60000;
 const api=(p,m='GET',b)=>fetch(B+p+'.json',{method:m,body:b===undefined?undefined:JSON.stringify(b)}).then(r=>r.json());

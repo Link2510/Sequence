@@ -56,7 +56,7 @@ cd G:\AI\web\sequence\Sequence
 powershell -ExecutionPolicy Bypass -File .\patch-back-button.ps1
 ```
 
-Script chỉ thêm nút vào file nào chưa có; file đã có thì bỏ qua. Rummikub cũng cần giữ host database đúng (`...asia-southeast1.firebasedatabase.app`) — nếu file mới dùng `...firebaseio.com` thì sửa lại trước khi deploy.
+Script tự làm 2 việc: thêm nút vào file chưa có, và đổi host database sai `...firebaseio.com` thành `...asia-southeast1.firebasedatabase.app` (chỗ này hay bị mất khi đè file Rummikub mới). File nào đã đúng thì bỏ qua.
 
 ### Gói miễn phí (Spark)
 

@@ -1,6 +1,9 @@
 # Chạy sau khi đè file index.html mới vào thư mục game:
 #   powershell -ExecutionPolicy Bypass -File .\patch-back-button.ps1
-# Script chỉ thêm nút "Về sảnh trò chơi" nếu file chưa có; không sửa gì khác.
+# Script làm 2 việc, và bỏ qua file/nội dung đã đúng:
+#   1. Thêm nút "Về sảnh trò chơi" nếu file chưa có.
+#   2. Sửa host Realtime Database sai (...firebaseio.com) thành ...asia-southeast1.firebasedatabase.app.
+# Sau đó chạy: firebase deploy --only hosting:boardgameace --project sequence-23c7f
 
 param(
   [string[]]$Files = @(
@@ -19,15 +22,37 @@ $snippet = @'
 </style>
 '@
 
+$wrongHost = 'https://sequence-23c7f-default-rtdb.firebaseio.com'
+$rightHost = 'https://sequence-23c7f-default-rtdb.asia-southeast1.firebasedatabase.app'
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 
 foreach ($f in $Files) {
   if (-not (Test-Path $f)) { Write-Warning "Không tìm thấy: $f"; continue }
-  $text = [System.IO.File]::ReadAllText($f, [System.Text.Encoding]::UTF8)
-  if ($text.Contains('class="bg-home"')) { "Đã có sẵn: $f"; continue }
-  $m = [regex]::Match($text, '<body[^>]*>')
-  if (-not $m.Success) { Write-Warning "Không tìm thấy <body> trong: $f"; continue }
-  $text = $text.Insert($m.Index + $m.Length, $snippet)
-  [System.IO.File]::WriteAllText($f, $text, $utf8)
-  "Đã thêm nút: $f"
+
+  $original = [System.IO.File]::ReadAllText($f, [System.Text.Encoding]::UTF8)
+  $text = $original
+  $changed = $false
+
+  if (-not $text.Contains('class="bg-home"')) {
+    $m = [regex]::Match($text, '<body[^>]*>')
+    if ($m.Success) {
+      $text = $text.Insert($m.Index + $m.Length, $snippet)
+      $changed = $true
+      "Đã thêm nút về trang chủ: $f"
+    } else {
+      Write-Warning "Không tìm thấy <body> trong: $f"
+    }
+  }
+
+  if ($text.Contains($wrongHost)) {
+    $text = $text.Replace($wrongHost, $rightHost)
+    $changed = $true
+    "Đã sửa host Realtime Database: $f"
+  }
+
+  if ($changed) {
+    [System.IO.File]::WriteAllText($f, $text, $utf8)
+  } else {
+    "Không cần sửa: $f"
+  }
 }
