@@ -57,7 +57,7 @@ cd G:\AI\web\sequence\Sequence
 powershell -ExecutionPolicy Bypass -File .\patch-back-button.ps1
 ```
 
-Script tự quét mọi thư mục game có `index.html` (bỏ qua trang chủ và `legacy/`), tự làm 2 việc: thêm nút vào file chưa có và đổi host database sai `...firebaseio.com` thành `...asia-southeast1.firebasedatabase.app`. Nội dung nút được đọc từ `back-button.snippet.html` (UTF-8) để tránh lỗi font khi chạy bằng Windows PowerShell. File nào đã đúng thì bỏ qua.
+Script tự quét mọi thư mục game có `index.html` (bỏ qua trang chủ và `legacy/`), tự làm 2 việc: thêm nút vào file chưa có và đổi host database sai `...firebaseio.com` thành `...asia-southeast1.firebasedatabase.app`. Nội dung nút được đọc từ `back-button.snippet.html` (UTF-8) để tránh lỗi font khi chạy bằng Windows PowerShell. Nếu nút đã tồn tại nhưng bị lỗi font (kiểu `Sáº£nh trĂ² chÆ¡i`), script sẽ thay bằng nội dung đúng. File nào đã đúng thì bỏ qua.
 
 Riêng game Hội Nhẫn có `fotr\CAP-NHAT-FOTR.bat` (file **local**, nằm trong `.gitignore` và bị loại khỏi hosting): chạy file này sẽ chép bản mới nhất từ `G:\AI\web\lotr-fotr-trick-taking` sang `fotr/`, ghi lại cấu hình Firebase rồi gọi script ở trên. Sửa biến `SRC` ở đầu file nếu bạn đổi nơi lưu source.
 

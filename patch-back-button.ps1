@@ -25,6 +25,7 @@ if (-not $Files -or $Files.Count -eq 0) {
 $snippetPath = Join-Path $PSScriptRoot 'back-button.snippet.html'
 if (-not (Test-Path -LiteralPath $snippetPath)) { throw "Thiếu file: $snippetPath" }
 $snippet = [System.IO.File]::ReadAllText($snippetPath, [System.Text.Encoding]::UTF8)
+$expectedAnchor = [regex]::Match($snippet, '<a class="bg-home"[\s\S]*?</a>').Value
 
 $wrongHost = 'https://sequence-23c7f-default-rtdb.firebaseio.com'
 $rightHost = 'https://sequence-23c7f-default-rtdb.asia-southeast1.firebasedatabase.app'
@@ -37,7 +38,8 @@ foreach ($f in $Files) {
   $text = $original
   $changed = $false
 
-  if (-not $text.Contains('class="bg-home"')) {
+  $anchorMatch = [regex]::Match($text, '<a class="bg-home"[\s\S]*?</a>')
+  if (-not $anchorMatch.Success) {
     $m = [regex]::Match($text, '<body[^>]*>')
     if ($m.Success) {
       $text = $text.Insert($m.Index + $m.Length, $snippet)
@@ -46,6 +48,10 @@ foreach ($f in $Files) {
     } else {
       Write-Warning "Không tìm thấy <body> trong: $f"
     }
+  } elseif ($anchorMatch.Value -ne $expectedAnchor) {
+    $text = $text.Replace($anchorMatch.Value, $expectedAnchor)
+    $changed = $true
+    "Đã sửa lỗi font nút về trang chủ: $f"
   }
 
   if ($text.Contains($wrongHost)) {
