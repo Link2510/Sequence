@@ -40,7 +40,7 @@
   function humanLabel(i) {
     if (!S.round) return S.lang === 'vi' ? 'Bạn' : 'You';
     var order = S.round.humanIndices.indexOf(i);
-    return order === 1 ? T('you2') : T('you1');
+    return order === 3 ? T('you4') : order === 2 ? T('you3') : order === 1 ? T('you2') : T('you1');
   }
   function playerName(i) {
     var id = S.round.players[i].characterId;
@@ -58,7 +58,7 @@
       S.progress.completed = Array.isArray(p.completed) ? p.completed : [];
       S.progress.sound = p.sound !== false;
       S.progress.playerCount = p.playerCount === 3 ? 3 : 4;
-      S.progress.humanCount = p.humanCount === 2 ? 2 : 1;
+      S.progress.humanCount = (p.humanCount >= 1 && p.humanCount <= 4) ? p.humanCount : 1;
       S.progress.tutorialDone = !!p.tutorialDone;
       S.lang = p.lang === 'en' ? 'en' : 'vi';
     } catch (e) { /* storage unavailable */ }
@@ -182,6 +182,7 @@
     $('langBtn').textContent = T('language');
     $('tutorialBtn').textContent = T('tutorial');
     $('guideBtn').textContent = T('guide');
+    $('homeBtn').textContent = T('home');
     $('resetBtn').textContent = T('reset');
     $('playButton').textContent = T('play');
     $('statusLabel').textContent = S.lang === 'vi' ? 'Mục tiêu & Nhật ký' : 'Goals & Log';
@@ -782,18 +783,22 @@
     overlay('<div class="modal title-screen"><div class="title-hero" style="background-image:url(\'assets/hero.svg\')">' +
       '<div class="title-hero-text"><h1>' + T('appTitle') + '</h1><p>' + T('appSubtitle') + '</p></div></div>' +
       '<div class="modal-body"><p>' + T('guideIntro') + '</p>' +
-      '<h3>' + T('players') + '</h3><div class="pick-row">' +
-      '<button type="button" class="pill' + (S.progress.playerCount === 3 ? ' active' : '') + '" data-count="3">' + T('players3') + '</button>' +
-      '<button type="button" class="pill' + (S.progress.playerCount === 4 ? ' active' : '') + '" data-count="4">' + T('players4') + '</button></div>' +
-      '<h3>' + T('humanCount') + '</h3><div class="pick-row">' +
-      '<button type="button" class="pill' + (S.progress.humanCount === 1 ? ' active' : '') + '" data-humans="1">' + T('humans1') + '</button>' +
-      '<button type="button" class="pill' + (S.progress.humanCount === 2 ? ' active' : '') + '" data-humans="2">' + T('humans2') + '</button></div>' +
+      '<h3>' + T('aiSection') + '</h3><div class="pick-row">' +
+      [[1, 3, 'onePlus2AI'], [1, 4, 'onePlus3AI'], [2, 3, 'twoPlus1AI'], [2, 4, 'twoPlus2AI']].map(function (o) {
+        return '<button type="button" class="pill' + (S.progress.humanCount === o[0] && S.progress.playerCount === o[1] ? ' active' : '') +
+          '" data-humans="' + o[0] + '" data-count="' + o[1] + '">' + T(o[2]) + '</button>';
+      }).join('') + '</div>' +
+      '<h3>' + T('multiSection') + '</h3><div class="pick-row">' +
+      [[3, 3, 'threeHumans'], [4, 4, 'fourHumans']].map(function (o) {
+        return '<button type="button" class="pill' + (S.progress.humanCount === o[0] && S.progress.playerCount === o[1] ? ' active' : '') +
+          '" data-humans="' + o[0] + '" data-count="' + o[1] + '">' + T(o[2]) + '</button>';
+      }).join('') + '</div>' +
       '<h3>' + T('onlineMode') + '</h3><div class="pick-row">' +
       '<button type="button" class="pill" id="hostBtn">' + T('createRoom') + '</button>' +
       '<input id="roomCodeInput" class="code-input" maxlength="6" placeholder="' + T('roomCode') + '">' +
       '<button type="button" class="pill" id="joinBtn">' + T('joinRoom') + '</button></div>' +
+      '<div id="openRooms" class="open-rooms" style="font-size:12px;color:#cdd3c4;margin:6px 0 0"></div>' +
       '<p style="font-size:12px;opacity:.7">' + T('onlineNote') + '</p>' +
-      '<div id="openRooms" class="open-rooms" style="font-size:12px;opacity:.85;margin-top:6px"></div>' +
       '<h3>18 ' + (S.lang === 'vi' ? 'chương' : 'chapters') + '</h3><div class="stage-grid">' +
       CHAPTERS.map(function (ch, i) {
         var un = ch.id <= S.progress.unlocked;
@@ -806,16 +811,11 @@
       '<button type="button" class="btn" id="titleTutorial">' + T('tutorial') + '</button></div>' +
       '<p style="font-size:12px;line-height:1.55;opacity:.7;margin-top:16px">' + T('savedNote') + ' ' + T('artNote') + '</p>' +
       '</div></div>');
-    Array.prototype.forEach.call(document.querySelectorAll('[data-count]'), function (b) {
-      b.addEventListener('click', function () {
-        S.progress.playerCount = Number(b.dataset.count); save();
-        Array.prototype.forEach.call(document.querySelectorAll('[data-count]'), function (x) { x.classList.remove('active'); });
-        b.classList.add('active'); beep(600, 0.06, 'triangle');
-      });
-    });
     Array.prototype.forEach.call(document.querySelectorAll('[data-humans]'), function (b) {
       b.addEventListener('click', function () {
-        S.progress.humanCount = Number(b.dataset.humans); save();
+        S.progress.humanCount = Number(b.dataset.humans);
+        S.progress.playerCount = Number(b.dataset.count);
+        save();
         Array.prototype.forEach.call(document.querySelectorAll('[data-humans]'), function (x) { x.classList.remove('active'); });
         b.classList.add('active'); beep(600, 0.06, 'triangle');
       });
@@ -963,6 +963,7 @@
       renderAll();
     });
     $('guideBtn').addEventListener('click', function () { showGuide(null); });
+    $('homeBtn').addEventListener('click', function () { location.href = '../index.html'; });
     $('tutorialBtn').addEventListener('click', function () {
       if (S.coach) return;
       startTutorial(I.tutorial.map(function (t) { return t.id; }), function () { renderAll(); scheduleAI(); });
