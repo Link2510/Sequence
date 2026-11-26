@@ -119,9 +119,7 @@
   }
   function publish() {
     if (!isHost() || !S.round || !Net.isReady()) return;
-    var now = Date.now();
-    if (now - S.net.lastPublish < 90) return;
-    S.net.lastPublish = now;
+    S.net.lastPublish = Date.now();
     try { Net.publishState(S.net.code, snapshot()); } catch (e) { /* offline again */ }
   }
   function rebuild(s) {
@@ -146,6 +144,7 @@
     S.logs = s.logs || [];
     S.lastOutcome = s.outcome;
     S.viewHuman = S.net.seat;
+    S.pendingChoices = s.needChoice != null ? [s.needChoice] : [];
     var box = $('logList');
     if (box) box.innerHTML = S.logs.map(function (e) { return '<div class="' + e.cls + '">' + e.msg + '</div>'; }).join('');
     if (s.phase === 'playing' && $('waitOverlay')) closeOverlay();
@@ -289,6 +288,7 @@
 
   function nextCharacterChoice() {
     if (!S.pendingChoices.length) {
+      if (isGuest()) { renderAll(); return; }   // host drives setup
       applySetupActions();
       renderAll();
       showSetupSummary();
@@ -347,6 +347,11 @@
     });
     $('charOk').addEventListener('click', function () {
       if (!chosen) chosen = options[0];
+      if (isGuest()) {
+        closeOverlay();
+        try { Net.sendIntent(S.net.code, { type: 'chooseChar', charId: chosen, seat: S.net.seat }); } catch (e) {}
+        return;
+      }
       r.players[idx].characterId = chosen;
       S.pendingChoices.shift();
       closeOverlay();
@@ -605,7 +610,7 @@
     log(T('trickWin').replace('{name}', playerName(res.winner)).replace('{n}', res.trick), 'log-gold');
     beep(res.usedRingPower ? 780 : 600, 0.18, 'sine');
     var finish = function () { finishTrick(); };
-    if (!S.progress.tutorialDone && S.round.trick === 2) {
+    if (!S.progress.tutorialDone && S.round.trick === 2 && !isOnline()) {
       S.progress.tutorialDone = true; save();
       startTutorial(['table', 'progress'], finish);
     } else setTimeout(finish, 1400);
@@ -740,7 +745,10 @@
     var it = item.value || {};
     if (it.seat === 1) {
       if (it.type === 'play' && S.round.phase === 'playing' && S.round.turnIndex === 1) {
-        if (S.round.players[1].hand.some(function (c) { return c.id === it.cardId; })) doPlay(1, it.cardId, !!it.useRingPower);
+        if (S.round.players[1].hand.some(function (c) { return c.id === it.cardId; })) {
+          doPlay(1, it.cardId, !!it.useRingPower);
+          scheduleAI();
+        }
       }
       if (it.type === 'chooseChar' && !S.round.players[1].characterId && CHARS[it.charId]) {
         S.round.players[1].characterId = it.charId;
@@ -849,7 +857,7 @@
         log((S.lang === 'vi' ? 'Lượt 1 bắt đầu' : 'Trick 1 begins'), 'log-gold');
         renderAll(); scheduleAI();
       };
-      if (!S.progress.tutorialDone && S.chapterIndex === 0) {
+      if (!S.progress.tutorialDone && S.chapterIndex === 0 && !isOnline()) {
         startTutorial(['welcome', 'lost', 'goals', 'ring', 'hand', 'follow', 'play'], go);
       } else go();
     });

@@ -59,6 +59,8 @@ powershell -ExecutionPolicy Bypass -File .\patch-back-button.ps1
 
 Script tự quét mọi thư mục game có `index.html` (bỏ qua trang chủ và `legacy/`), tự làm 2 việc: thêm nút vào file chưa có và đổi host database sai `...firebaseio.com` thành `...asia-southeast1.firebasedatabase.app`. Nội dung nút được đọc từ `back-button.snippet.html` (UTF-8) để tránh lỗi font khi chạy bằng Windows PowerShell. File nào đã đúng thì bỏ qua.
 
+Riêng game Hội Nhẫn có `fotr\CAP-NHAT-FOTR.bat` (file **local**, nằm trong `.gitignore` và bị loại khỏi hosting): chạy file này sẽ chép bản mới nhất từ `G:\AI\web\lotr-fotr-trick-taking` sang `fotr/`, ghi lại cấu hình Firebase rồi gọi script ở trên. Sửa biến `SRC` ở đầu file nếu bạn đổi nơi lưu source.
+
 ### Gói miễn phí (Spark)
 
 Không cần nâng cấp: cùng một project `sequence-23c7f` đang dùng, Firebase cho phép tối đa 36 site trên mỗi project, dùng chung hạn mức 10 GB lưu trữ và 360 MB truyền tải/ngày. Toàn bộ website hiện nặng khoảng 2 MB (chủ yếu là font local của Hội Nhẫn) nên cách rất xa hạn mức. Không dùng custom domain hay tính năng trả phí.
