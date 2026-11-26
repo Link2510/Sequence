@@ -147,7 +147,7 @@
     S.pendingChoices = s.needChoice != null ? [s.needChoice] : [];
     var box = $('logList');
     if (box) box.innerHTML = S.logs.map(function (e) { return '<div class="' + e.cls + '">' + e.msg + '</div>'; }).join('');
-    if (s.phase === 'playing' && $('waitOverlay')) closeOverlay();
+    if ((s.phase === 'playing' || s.needChoice != null) && $('waitOverlay')) closeOverlay();
     renderAll();
     handleGuestUI(s);
   }
@@ -709,13 +709,27 @@
       S.net.role = 'host'; S.net.code = randomCode(); S.net.seat = 0;
       S.progress.humanCount = 2; save();
       S.net.needChoice = null; S.net.shownChoice = null; S.net.lastOutcomeKey = null;
-      Net.createRoom(S.net.code, { playerCount: S.progress.playerCount, humanCount: 2, created: Date.now() })
+      S.net.autoStarted = false;
+      Net.createRoom(S.net.code, { playerCount: S.progress.playerCount, humanCount: 2, created: Date.now(), guestJoined: false })
         .then(function () {
           Net.watchIntents(S.net.code, handleIntent);
+          Net.watchMeta(S.net.code, function (meta) {
+            if (meta && meta.guestJoined) {
+              var wt = $('hostWaitText');
+              if (wt) wt.textContent = T('guestJoined');
+              if (!S.net.autoStarted) {
+                S.net.autoStarted = true;
+                if (!S.round) startChapter(0); else closeOverlay();
+              }
+            }
+          });
           overlay('<div class="modal"><div class="modal-body"><div class="eyebrow">' + T('host') + '</div>' +
             '<h2>' + T('shareCode').replace('{code}', S.net.code) + '</h2><p>' + T('onlineNote') + '</p>' +
-            '<p>' + T('waitingGuest') + '</p><div class="actions"><button type="button" class="btn btn-primary" id="hostStart">' + T('start') + '</button></div></div></div>');
-          $('hostStart').addEventListener('click', function () { closeOverlay(); startChapter(0); });
+            '<p id="hostWaitText">' + T('waitingGuest') + '</p><div class="actions"><button type="button" class="btn btn-primary" id="hostStart">' + T('start') + '</button></div></div></div>');
+          $('hostStart').addEventListener('click', function () {
+            S.net.autoStarted = true;
+            closeOverlay(); startChapter(0);
+          });
         });
     });
   }
@@ -731,6 +745,7 @@
         S.net.needChoice = null; S.net.shownChoice = null; S.net.lastOutcomeKey = null;
         S.progress.playerCount = meta.playerCount || 4;
         S.progress.humanCount = 2;
+        try { Net.markGuest(code); } catch (e) {}
         closeOverlay();
         Net.watchState(code, applySnapshot);
         overlay('<div class="modal" id="waitOverlay"><div class="modal-body"><div class="eyebrow">' + T('guest') + '</div>' +

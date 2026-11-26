@@ -43,6 +43,8 @@
     isReady: function () { return !!db; },
     createRoom: function (code, meta) { return ref(code).child('meta').set(meta); },
     joinRoom: function (code) { return ref(code).child('meta').once('value').then(function (s) { return s.val(); }); },
+    markGuest: function (code) { return ref(code).child('meta/guestJoined').set(true); },
+    watchMeta: function (code, cb) { ref(code).child('meta').on('value', function (s) { cb(s.val()); }); },
     watchState: function (code, cb) { ref(code).child('state').on('value', function (s) { cb(s.val()); }); },
     publishState: function (code, state) { return ref(code).child('state').set(state); },
     sendIntent: function (code, intent) { return ref(code).child('intents').push(intent); },
