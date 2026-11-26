@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Monopoly Việt Nam</title>
+<title>MONOPOLY · Phiên bản Việt Nam</title>
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body><a class="bg-home" href="https://boardgameace.web.app/" title="Về sảnh trò chơi" aria-label="Về sảnh trò chơi">← Sảnh trò chơi</a>
@@ -14,38 +14,63 @@
 </style>
 
 <div id="app">
-  <header id="topbar">
-    <div class="brand"><span class="mark">🎩</span><div><div id="brandTitle">MONOPOLY</div><div class="sub">Phiên bản Việt Nam · Bàn cờ cổ điển</div></div></div>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-badge">M</div>
+      <div>
+        <div class="brand-title">MONOPOLY</div>
+        <div class="brand-sub">Phiên bản Việt Nam · Bàn cờ cổ điển</div>
+      </div>
+    </div>
+    <div class="top-meta">
+      <span class="meta-pill" id="topRound">Lượt 0/400</span>
+      <span class="meta-pill gold" id="topPhase">Sẵn sàng</span>
+    </div>
     <div class="top-actions">
-      <button id="guideBtn" class="btn" type="button">Luật chơi</button>
-      <button id="homeBtn" class="btn" type="button">Về sảnh trò chơi</button>
+      <button id="guideBtn" class="btn btn-ghost" type="button">Luật chơi</button>
+      <button id="homeBtn" class="btn btn-ghost" type="button">Về sảnh trò chơi</button>
     </div>
   </header>
-  <main id="main">
-    <div id="playLayout">
-      <section id="boardPanel" class="panel">
-        <div id="board"></div>
+
+  <main class="layout">
+    <section class="board-panel panel">
+      <div class="panel-title"><span class="dot"></span> BÀN CỜ</div>
+      <div id="board"></div>
+    </section>
+
+    <aside class="dashboard">
+      <section class="turn-panel panel">
+        <div id="turnCard"></div>
+        <div id="phaseLabel" class="phase-label">Đang chờ</div>
       </section>
-      <aside id="sidePanel">
-        <section id="centerPanel" class="panel">
-          <div class="panel-head"><span id="phaseLabel">Đang chờ</span><span id="turnLabel"></span></div>
-          <div id="diceBox"><div class="die" id="die1">–</div><div class="die" id="die2">–</div><div id="diceSum"></div></div>
-          <div id="actionBox"></div>
-          <div id="detailBox"></div>
-        </section>
-        <section id="playersPanel" class="panel">
-          <div class="panel-head"><span>Người chơi</span><span id="roundLabel"></span></div>
-          <div id="playerList"></div>
-        </section>
-        <section id="logPanel" class="panel">
-          <div class="panel-head"><span>Nhật ký</span></div>
-          <div id="logList"></div>
-        </section>
-      </aside>
-    </div>
+
+      <section class="dice-panel panel">
+        <div class="panel-title"><span class="dot"></span> XÚC XẮC <span id="turnLabel" class="muted-right"></span></div>
+        <div id="diceBox">
+          <div class="die" id="die1">–</div>
+          <div class="die" id="die2">–</div>
+          <div id="diceSum" class="dice-sum"></div>
+        </div>
+        <div id="actionBox" class="action-box"></div>
+      </section>
+
+      <section class="info-panel panel">
+        <div class="tabs" id="tabs">
+          <button class="tab active" data-tab="detail" type="button">Thông tin ô</button>
+          <button class="tab" data-tab="players" type="button">Người chơi</button>
+          <button class="tab" data-tab="log" type="button">Nhật ký</button>
+        </div>
+        <div class="tab-panels">
+          <div id="detailBox" class="tab-panel active"></div>
+          <div id="playerList" class="tab-panel"></div>
+          <div id="logList" class="tab-panel"></div>
+        </div>
+      </section>
+    </aside>
   </main>
 </div>
 <div id="overlayRoot"></div>
+<div id="toastRoot"></div>
 <script src="js/board.js"></script>
 <script src="js/cards.js"></script>
 <script src="js/engine.js"></script>

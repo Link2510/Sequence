@@ -6,6 +6,7 @@ Thư mục: `G:\AI-Models\monopoly-vn`. Mở `index.html` là chơi.
 
 ## Có gì
 
+- Giao diện thiết kế lại toàn bộ: thanh trên cùng có số lượt/trạng thái, bàn cờ lớn, bảng điều khiển bên phải gồm thẻ lượt đi (biểu tượng + tiền), ô xúc xắc/nút hành động, và 3 tab **Thông tin ô / Người chơi / Nhật ký**; có thông báo ngắn (toast) sau mỗi hành động. Giao diện đáp ứng màn hình nhỏ.
 - Bàn 40 ô với tên đường Việt Nam, 22 đất + 4 ga + 2 tiện ích, 16 Thử Thách + 16 Khối Cộng Đồng.
 - Luật cổ điển: xúc xắc, đi bài, qua GO nhận 200đ, 3 lần đôi liên tiếp vào tù, thuế, mua/đấu giá đất, thuê theo nhà/khách sạn, ga/tiện ích, thế chấp/chuộc, xây nhà theo nhóm màu, phá sản chuyển tài sản.
 - Chấm thắng: người cuối còn lại, hoặc **hết 400 lượt thì tính tổng tài sản** (giới hạn cần thiết để game web có điểm kết thúc — bản Steam không có, mình ghi rõ trong hướng dẫn).
@@ -13,6 +14,10 @@ Thư mục: `G:\AI-Models\monopoly-vn`. Mở `index.html` là chơi.
   - **Với AI (local)**: 1 bạn + 2 AI, 1 bạn + 3 AI, 2 bạn + 1 AI, 2 bạn + 2 AI.
   - **Nhiều người thật (local)**: 2/3/4 người, luân phiên cùng máy.
   - **Với bạn bè (online)**: tạo phòng, vào bằng mã (mã bắt đầu bằng **M**), dùng chung RTDB `lotr-fotr-rooms` của project `sequence-23c7f` — **không cần deploy lại rules**. Chủ phòng chạy luật, khách gửi lượt đi.
+- **Hiệu ứng**: xúc xắc lắc 3D kèm tiếng lắc, quân cờ (có biểu tượng 🎩/🐕/🚂/🎒) trượt từng ô theo đường vòng, ô đích sáng lên và bàn rung nhẹ lúc xúc xắc dừng — tự tạo bằng CSS/Web Animations, không copy asset của Steam.
+- Bàn cờ phóng to, có **khung gỗ/vàng kiểu board game thật**, trung tâm là tranh thành phố SVG tự vẽ. Ô đất có dải màu nhóm, thanh màu chủ sở hữu, biểu tượng + tên người đó, **cấp nhà** (`Cấp 0`…`Cấp 4`, `🏨 Cấp 5`) và tiền thuê; hover hiện tooltip đầy đủ. Khi quân đi, các ô lần lượt sáng lên.
+- Khi đi vào đất trống hiện **hộp thoại “Mua ngay / Không mua — đấu giá”** kèm giá và bảng tiền thuê.
+- Hộp nâng cấp cho phép **chọn cấp 1–4 hoặc khách sạn**, hiện chi phí; cấp nào thiếu tiền hoặc vi phạm luật xây đều trong nhóm màu thì **làm mờ kèm lý do**.
 - Không telemetry/tài khoản. Chế độ local không gọi mạng; chế độ online tải SDK Firebase từ `gstatic.com` và đọc/ghi `lotr-fotr-rooms/<mã-M>` trên project của bạn.
 
 ## Kiểm chứng

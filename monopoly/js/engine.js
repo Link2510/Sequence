@@ -109,7 +109,11 @@
     s.lastCard = card;
     log(s, '🃏 ' + p.name + ': ' + card.text);
     var e = card.effect;
-    if (e.kind === 'cash') { addCash(s, p, e.amount); log(s, p.name + (e.amount >= 0 ? ' nhận ' : ' trả ') + Math.abs(e.amount) + 'đ'); }
+    if (e.kind === 'cash') {
+      if (e.amount >= 0) addCash(s, p, e.amount);
+      else pay(s, p, null, -e.amount, 'thẻ');
+      log(s, p.name + (e.amount >= 0 ? ' nhận ' : ' trả ') + Math.abs(e.amount) + 'đ');
+    }
     if (e.kind === 'freeJail') p.freeJail++;
     if (e.kind === 'collectEach') active(s).forEach(function (q) { if (q !== p) { pay(s, q, p, e.amount); } });
     if (e.kind === 'payEach') active(s).forEach(function (q) { if (q !== p) { pay(s, p, q, e.amount); } });
@@ -169,7 +173,7 @@
         pay(s, p, own, rent, 'thuê ' + t.name);
       } else log(s, p.name + ' đứng trên tài sản của mình');
     } else log(s, p.name + ' đến ' + t.name);
-    if (s.phase !== 'ended') s.phase = 'end';
+    if (s.phase !== 'ended' && s.phase !== 'buy' && s.phase !== 'auction') s.phase = 'end';
   }
 
   function roll(s) {
@@ -282,6 +286,49 @@
     p.cash -= t.houseCost;
     return { ok: true };
   }
+  function levelOf(p, tile) { return p.hotels.indexOf(tile) >= 0 ? 5 : (p.houses[tile] || 0); }
+  function sameGroup(s, p, tile) {
+    var t = TILES[tile];
+    return p.properties.filter(function (i) {
+      return TILES[i].type === 'property' && TILES[i].color === t.color && p.mortgaged.indexOf(i) < 0;
+    });
+  }
+  function buildOptions(s, p, tile) {
+    var t = TILES[tile];
+    if (!t || t.type !== 'property' || p.properties.indexOf(tile) < 0) return [];
+    var cur = levelOf(p, tile), out = [];
+    for (var lv = cur + 1; lv <= 5; lv++) {
+      var cost = (lv - cur) * (t.houseCost || 0);
+      var enabled = true, reason = '';
+      if (cur === 5) { enabled = false; reason = 'Đã là khách sạn'; }
+      else if (lv === 5) {
+        var grp = sameGroup(s, p, tile);
+        if (grp.length < 2 || grp.some(function (i) { return levelOf(p, i) < 4; })) {
+          enabled = false; reason = 'Cần 4 nhà ở mọi đất cùng nhóm màu';
+        }
+      } else {
+        var group = sameGroup(s, p, tile);
+        if (group.length < 2) { enabled = false; reason = 'Cần ít nhất 2 đất cùng nhóm màu'; }
+        else {
+          var others = group.filter(function (i) { return i !== tile; }).map(function (i) { return levelOf(p, i); });
+          var maxOther = Math.max.apply(null, others.concat([0]));
+          if (lv > maxOther + 1) { enabled = false; reason = 'Phải xây đều trong nhóm màu'; }
+        }
+      }
+      if (p.cash < cost) { enabled = false; reason = 'Không đủ tiền'; }
+      out.push({ level: lv, label: lv === 5 ? 'Khách sạn' : lv + ' nhà', cost: cost, enabled: enabled, reason: reason });
+    }
+    return out;
+  }
+  function buildTo(s, tile, target) {
+    var p = s.players[s.current], opt = buildOptions(s, p, tile).filter(function (o) { return o.level === target; })[0];
+    if (!opt || !opt.enabled) return { ok: false, reason: opt ? opt.reason : 'invalid' };
+    p.cash -= opt.cost;
+    if (target === 5) { p.houses[tile] = 4; if (p.hotels.indexOf(tile) < 0) p.hotels.push(tile); }
+    else { p.houses[tile] = target; p.hotels = p.hotels.filter(function (i) { return i !== tile; }); }
+    log(s, p.name + ' nâng ' + TILES[tile].name + ' lên ' + opt.label + ' (' + opt.cost + 'đ)');
+    return { ok: true, level: target, cost: opt.cost };
+  }
   function sellHouse(s, tile) {
     var p = s.players[s.current], t = TILES[tile];
     if (p.hotels.indexOf(tile) >= 0) { p.hotels = p.hotels.filter(function (i) { return i !== tile; }); p.houses[tile] = 4; }
@@ -382,6 +429,7 @@
     roll: roll, leaveJailCash: leaveJailCash, useFreeJail: useFreeJail,
     buyProperty: buyProperty, canBuy: canBuy, startAuction: startAuction, placeBid: placeBid,
     resolveAuction: resolveAuction, build: build, buildAllowed: buildAllowed, sellHouse: sellHouse,
+    levelOf: levelOf, buildOptions: buildOptions, buildTo: buildTo,
     mortgage: mortgage, unmortgage: unmortgage, endTurn: endTurn,
     aiTurn: aiTurn, aiBuy: aiBuy, aiBid: aiBid, pay: pay, bankrupt: bankrupt,
     netWorth: netWorth, clone: clone
