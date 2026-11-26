@@ -13,6 +13,7 @@
         "README.md",
         "database.rules.json",
         "*.ps1",
+        "back-button.snippet.html",
         "legacy/**"
       ],
       "headers": [

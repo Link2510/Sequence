@@ -22,6 +22,12 @@
       "$room": {
         ".write": true
       }
+    },
+    "lotr-fotr-rooms": {
+      ".read": true,
+      "$room": {
+        ".write": true
+      }
     }
   }
 }

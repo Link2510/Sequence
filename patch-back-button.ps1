@@ -20,14 +20,11 @@ if (-not $Files -or $Files.Count -eq 0) {
     Where-Object { Test-Path -LiteralPath $_ }
 }
 
-$snippet = @'
-<a class="bg-home" href="https://boardgameace.web.app/" title="Về sảnh trò chơi" aria-label="Về sảnh trò chơi">← Sảnh trò chơi</a>
-<style>
-.bg-home{position:fixed;left:12px;bottom:12px;z-index:2147483647;display:inline-flex;align-items:center;padding:8px 12px;border-radius:999px;background:rgba(15,18,32,.82);color:#fff;text-decoration:none;font:600 13px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;border:1px solid rgba(255,255,255,.18);box-shadow:0 6px 18px rgba(0,0,0,.28);backdrop-filter:blur(6px)}
-.bg-home:hover,.bg-home:focus-visible{background:#242b55;color:#ffcc4d;outline:none}
-@media (prefers-color-scheme:light){.bg-home{background:rgba(255,255,255,.9);color:#1c2040;border-color:rgba(0,0,0,.15)}.bg-home:hover,.bg-home:focus-visible{color:#d98a00}}
-</style>
-'@
+# Đọc snippet từ file UTF-8 riêng: Windows PowerShell 5.1 đọc script không có BOM
+# như ANSI, nên nhúng tiếng Việt trực tiếp trong script sẽ bị lỗi font.
+$snippetPath = Join-Path $PSScriptRoot 'back-button.snippet.html'
+if (-not (Test-Path -LiteralPath $snippetPath)) { throw "Thiếu file: $snippetPath" }
+$snippet = [System.IO.File]::ReadAllText($snippetPath, [System.Text.Encoding]::UTF8)
 
 $wrongHost = 'https://sequence-23c7f-default-rtdb.firebaseio.com'
 $rightHost = 'https://sequence-23c7f-default-rtdb.asia-southeast1.firebasedatabase.app'
