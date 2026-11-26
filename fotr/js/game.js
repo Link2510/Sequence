@@ -793,6 +793,7 @@
       '<input id="roomCodeInput" class="code-input" maxlength="6" placeholder="' + T('roomCode') + '">' +
       '<button type="button" class="pill" id="joinBtn">' + T('joinRoom') + '</button></div>' +
       '<p style="font-size:12px;opacity:.7">' + T('onlineNote') + '</p>' +
+      '<div id="openRooms" class="open-rooms" style="font-size:12px;opacity:.85;margin-top:6px"></div>' +
       '<h3>18 ' + (S.lang === 'vi' ? 'chương' : 'chapters') + '</h3><div class="stage-grid">' +
       CHAPTERS.map(function (ch, i) {
         var un = ch.id <= S.progress.unlocked;

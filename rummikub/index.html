@@ -204,6 +204,7 @@ function home(){return `<div class="hero">${logo()}<p>Xếp bài, ghép bộ, h�
 <div class="card stack"><h3>🏠 Tạo phòng mới</h3><p style="opacity:.75;font-size:14px">Bạn là chủ phòng, gửi mã phòng cho bạn bè.</p><button class="btn" data-a="create">Tạo phòng</button></div>
 <div class="card stack"><h3>🔑 Vào phòng</h3><input id="cd" maxlength="4" placeholder="Mã 4 ký tự" style="text-transform:uppercase;letter-spacing:4px"><button class="btn" data-a="join">Vào phòng</button></div>
 <div class="card row full" style="justify-content:space-between"><div><h3>🤖 Chơi với máy</h3><p style="opacity:.75;font-size:14px">Không cần mạng, luyện tay trước khi gặp bạn bè.</p></div><div class="row"><select id="md" class="sel" title="Chế độ"><option value="0">Chuẩn</option><option value="2">Twist</option></select><select id="tl2" class="sel" title="Thời gian mỗi lượt">${tlOpts(0)}</select><select id="nb" style="padding:12px;border-radius:12px;font-size:15px;background:#123b31;color:#fff;border:2px solid rgba(255,255,255,.18)"><option value="1">1 máy</option><option value="2">2 máy</option><option value="3">3 máy</option></select><button class="btn" data-a="bot">Chơi ngay</button></div></div>
+<div class="card stack full"><h3>🌐 Phòng đang mở</h3><div id="openRooms" style="opacity:.8;font-size:14px">Đang tải danh sách phòng…</div></div>
 <div class="full" style="text-align:center"><button class="btn g" data-a="rules">📖 Hướng dẫn chơi</button>${toast()}<p style="opacity:.55;font-size:13px;margin-top:8px">Phòng online tự xoá sau 30 phút không hoạt động.</p></div></div>`}
 function lobby(){const ids=Object.keys(R.p),host=R.h==me;
  return `<div class="top"><button class="btn g s" data-a="leave">← Rời phòng</button><div class="code" data-a="copy" style="cursor:pointer" title="Bấm để chép">${room}</div></div>
@@ -279,4 +280,34 @@ setInterval(()=>{if(!G||G.w||!G.tl||!G.dl)return;const left=Math.ceil((G.dl-Date
  if(left<=0&&cur==me||(!L&&left<=-4)){XV=G.v;S=[];pass(cur,1)}},500);
 setInterval(()=>{if(room&&V!='rules')pull()},4000);
 cleanup();if(room)enter(room);else render();
+</script>
+<script>
+/* Danh sách phòng đang chờ — đọc từ RTDB, không dùng thêm dịch vụ nào. */
+(function(){
+  const box=()=>document.getElementById('openRooms');
+  const nameOf=r=>(r&&r.p&&r.p[r.h])||'Ẩn danh';
+  async function refresh(){
+    const el=box(); if(!el) return;
+    try{
+      const data=await fetch(B+'.json').then(x=>x.json());
+      const rooms=Object.keys(data||{}).filter(c=>{
+        const r=data[c];
+        return r && (Date.now()-(r.t||0))<TTL && r.s!=='play';
+      }).slice(0,20);
+      if(!rooms.length){el.textContent='Chưa có phòng nào đang chờ. Bấm “Tạo phòng” để bắt đầu nhé.';return}
+      el.innerHTML=rooms.map(c=>{
+        const r=data[c],n=Object.keys(r.p||{}).length;
+        return `<button class="btn g s" data-room="${esc(c)}" style="margin:4px 4px 0 0">${esc(c)} · ${esc(nameOf(r))} · ${n}/4</button>`;
+      }).join('');
+      el.querySelectorAll('[data-room]').forEach(b=>b.addEventListener('click',()=>{
+        const nm=document.getElementById('nm');
+        if(!nm||!nm.value.trim()){M='Nhập tên của bạn trước nhé';render();if(nm)nm.focus();return}
+        const cd=document.getElementById('cd');if(cd)cd.value=b.dataset.room;
+        join();
+      }));
+    }catch(e){el.textContent='Không tải được danh sách phòng (kiểm tra Firebase).'}
+  }
+  setInterval(()=>{if(V==='home')refresh()},10000);
+  refresh();
+})();
 </script></body></html>
