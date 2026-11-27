@@ -842,7 +842,7 @@
       '<h3>Chơi với bạn bè (online)</h3><div class="pick-row">' +
       '<button class="pill" id="hostRoomBtn">Tạo phòng</button>' +
       '<select id="onlineCount" class="code-input"><option value="4">4 người</option><option value="3">3 người</option></select>' +
-      '<input id="roomCodeInput" class="code-input" maxlength="6" placeholder="Mã phòng (M...)">' +
+      '<input id="roomCodeInput" class="code-input" maxlength="6" placeholder="Mã phòng (M..., thường cũng được)" style="text-transform:none">' +
       '<button class="pill" id="joinBtn">Tham gia</button></div>' +
       '<div id="openRooms" style="font-size:12px;color:#cdd3c4;margin-top:6px"></div>' +
       '<p style="font-size:12px;opacity:.7">Tài sản, thuế, tù, xây nhà/khách sạn theo luật cổ điển. Giới hạn 400 lượt: hết lượt chấm theo tổng tài sản.</p></div>');
@@ -891,7 +891,8 @@
     }
     S.lastSeen = { dice: null, pos: S.s.players.map(function (p) { return p.pos; }) };
     renderAll();
-    if (!online) aiLoop();
+    if (online) publishNow(); /* khách vào phòng phải thấy ngay bàn cờ */
+    else aiLoop();
   }
 
   function bind() {
