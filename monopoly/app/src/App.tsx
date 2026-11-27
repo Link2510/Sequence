@@ -1655,7 +1655,7 @@ export default function App() {
                 <Compass className="w-4 h-4" />
               </div>
               <span className="font-display text-base font-bold text-white">
-                Tour Kinh Doanh Việt Nam
+                Tour Việt Nam
               </span>
               <span className="font-mono-num text-xs font-bold text-amber-300 bg-black/35 border border-white/10 px-2.5 py-1 rounded-md">
                 Phòng: {onlineRoom.code}
@@ -1890,7 +1890,7 @@ export default function App() {
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-display text-lg font-bold text-white">
-                  Hướng Dẫn Nhanh Tour Kinh Doanh
+                  Hướng Dẫn Nhanh Tour Việt Nam
                 </h3>
                 <button
                   onClick={() => setShowRulesModal(false)}
@@ -1974,7 +1974,7 @@ export default function App() {
               <Compass className="w-4 h-4" />
             </div>
             <span className="font-display text-base font-bold text-white">
-              Tour Kinh Doanh Việt Nam
+              Tour Việt Nam
             </span>
           </div>
 
@@ -2129,7 +2129,7 @@ export default function App() {
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-display text-lg font-bold text-white">
-                Hướng Dẫn Nhanh Tour Kinh Doanh
+                Hướng Dẫn Nhanh Tour Việt Nam
               </h3>
               <button
                 onClick={() => setShowRulesModal(false)}

@@ -1,4 +1,4 @@
-# Tour Kinh Doanh Việt Nam
+# Tour Việt Nam
 
 Trò chơi cờ tỷ phú chiến thuật, bàn **32 ô** với địa danh Việt Nam. Chạy hoàn toàn trong trình duyệt; bản dựng tĩnh đặt tại `/monopoly/` trên Firebase Hosting.
 

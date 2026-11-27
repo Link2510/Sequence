@@ -12,7 +12,7 @@ export const VietnamMapBackdrop: React.FC = () => {
     >
       <div className="relative w-full h-full flex items-center justify-center rounded-xl overflow-hidden bg-[#FDF8E4]/92 shadow-inner">
         <img
-          src="./assets/aistudio/image_02e764e3.png"
+          src="./assets/images_nobg.png"
           alt="Bản đồ Việt Nam cùng quần đảo Hoàng Sa và Trường Sa"
           referrerPolicy="no-referrer"
           className="w-full h-full object-contain"

@@ -171,7 +171,7 @@ export const ActionModal: React.FC<ActionModalProps> = ({
 
             {inspectedTile.type !== 'PROPERTY' && inspectedTile.type !== 'RESORT' && (
               <p className="mt-4 text-sm text-slate-300 leading-relaxed">
-                {inspectedTile.subtitle || 'Ô sự kiện đặc biệt trên bản đồ Tour Kinh Doanh Việt Nam.'}
+                {inspectedTile.subtitle || 'Ô sự kiện đặc biệt trên bản đồ Tour Việt Nam.'}
               </p>
             )}
 

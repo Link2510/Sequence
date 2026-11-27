@@ -107,7 +107,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
               <Compass className="w-5 h-5" />
             </div>
             <span className="font-display text-lg font-bold tracking-tight text-white">
-              Tour Kinh Doanh Việt Nam
+              Tour Việt Nam
             </span>
           </div>
 
