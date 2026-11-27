@@ -140,6 +140,9 @@ async function pull(){if(!room||L)return;let r;try{r=await api(room)}catch(e){re
  const sig=JSON.stringify(r);if(sig==LS||(DG&&DG.on))return;LS=sig;setup();render()}
 const mkW=()=>({v:G.v,k:G.k,rack:G.h[me].slice(),tb:G.tb.map(s=>s.slice()),orig:G.h[me].slice()});
 function setup(){if(G&&myTurn()&&(!W||W.v!=G.v||W.k!=G.k)){W=mkW();S=[]}}
+function sortRack(mode){const playable=myTurn()&&W,src=playable?W.rack:(G&&G.h&&G.h[me]?G.h[me]:[]);if(!src.length)return;
+ const cmp=mode==='s1'?((p,q)=>(p>103)-(q>103)||num(p)-num(q)||col(p)-col(q)):((p,q)=>(p>103)-(q>103)||col(p)-col(q)||num(p)-num(q));
+ const sorted=src.slice().sort(cmp);if(playable)W.rack=sorted;RK=sorted.slice();if(G)RKk=G.k;render()}
 function leave(){if(es)es.close();if(!L&&R&&!R.g&&room){if(R.h==me)api(room,'DELETE');else api(room+'/p/'+me,'DELETE')}if(!L)localStorage.rkroom='';L=0;LS='';room='';R=G=W=null;S=[];V='home';render()}
 function mkGame(ids,pv,tl,md){ids=ids.slice().sort(()=>Math.random()-.5);const d=[...Array(md==2?112:106).keys()].sort(()=>Math.random()-.5);const h={};ids.forEach(i=>h[i]=d.splice(0,14));
  if(pv&&(pv.mode||0)!=(md||0))pv=null;const sc={};ids.forEach(i=>sc[i]=(pv&&pv.sc&&pv.sc[i])||0);
@@ -192,8 +195,7 @@ function act(a,x){M='';HL=[];
  else if(a=='add'&&S.length){const s=S.slice(),n=+x;rm(s);W.tb[n].push(...s);W.tb=W.tb.filter(q=>q.length).map(arr);S=[]}
  else if(a=='ret'){const s=S.filter(i=>W.orig.includes(i));if(!s.length)M='Chỉ trả lại được quân bài của bạn, không lấy bài trên bàn về giá';else{rm(s);W.rack.push(...s);S=S.filter(i=>!s.includes(i))}}
  else if(a=='undo'){W=mkW();S=[]}
- else if(a=='s1'){W.rack.sort((p,q)=>(p>103)-(q>103)||num(p)-num(q)||col(p)-col(q));RK=W.rack.slice()}
- else if(a=='s2'){W.rack.sort((p,q)=>(p>103)-(q>103)||col(p)-col(q)||num(p)-num(q));RK=W.rack.slice()}
+ else if(a=='s1'||a=='s2')return sortRack(a);
  else if(a=='end')return endTurn();else if(a=='draw')return draw();
  render()}
 function tog(i){M='';HL=[];S=S.includes(i)?S.filter(x=>x!=i):[...S,i];render()}
@@ -247,7 +249,7 @@ function game(){const mt=myTurn(),tb=mt?W.tb:G.tb,rack=mt?W.rack:G.h[me];
 <div class="board">${tb.length?tb.map((s,x)=>{const p=pts(s);return `<div class="set ${p?'':'bad'}${mt?'':' '}"><small>${p||'✗'}</small>${(v=>s.map((i,x)=>T(i,'',v[x])).join(''))(jv(s))}${mt?`<button class="add" data-a="add" data-k="${x}">+</button>`:''}</div>`}).join(''):'<div class="empty">Bàn chơi đang trống</div>'}</div>
 <div class="rack mine">${ord(rack).map(i=>T(i)).join('')||'<span style="opacity:.6">Hết bài</span>'}</div>
 ${mt?`<div class="acts"><button class="btn" data-a="new">＋ Nhóm mới</button><button class="btn g" data-a="ret">↩ Trả về giá</button><button class="btn g" data-a="undo">Hoàn tác</button><button class="btn g" data-a="s1">Sắp theo số</button><button class="btn g" data-a="s2">Sắp theo màu</button><span style="flex:1"></span><button class="btn" data-a="end">✔ Kết thúc lượt</button><button class="btn g" data-a="draw">Rút bài</button></div>
-<p style="opacity:.65;font-size:13px;margin-top:8px">Kéo thả quân bài vào bàn (tạo nhóm mới), vào giữa/cuối một nhóm, hoặc sắp xếp lại giá. Cũng có thể bấm chọn quân rồi dùng nút “Nhóm mới” / “+”.</p>`:''}${toast()}`}
+<p style="opacity:.65;font-size:13px;margin-top:8px">Kéo thả quân bài vào bàn (tạo nhóm mới), vào giữa/cuối một nhóm, hoặc sắp xếp lại giá. Cũng có thể bấm chọn quân rồi dùng nút “Nhóm mới” / “+”.</p>`:''}${!mt?`<div class="acts"><button class="btn g s" data-a="s1">Sắp theo số</button><button class="btn g s" data-a="s2">Sắp theo màu</button><span style="opacity:.6;font-size:13px">Sắp sẵn giá cho lượt sau</span></div>`:''}${toast()}`}
 function twistRules(){const X=(a,t)=>{const p=pts(a);return `<div class="exr"><div class="ex">${a.map(i=>T(i)).join('')}</div><div class="cap ${p?'ok':'no'}">${p?'✓ '+p+' điểm':'✗ Không hợp lệ'} — ${t}</div></div>`};
  return `<h3>🌀 Rummikub Twist là gì?</h3><p>Chế độ riêng, chọn khi tạo phòng (hoặc khi chơi với máy). Luật chung giống chế độ Cơ bản: 14 quân mỗi người, lần đầu đặt ≥ 30 điểm, sắp xếp lại bàn tự do. Điểm khác biệt là bộ bài có <b>112 quân</b>: 104 quân số và <b>8 joker</b>, mỗi loại 2 quân.</p>
 <table class="sc" style="margin:10px 0"><tr><th>Quân</th><th>Tên</th><th>Thay cho</th><th>Điểm phạt cuối ván</th></tr>

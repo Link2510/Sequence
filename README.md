@@ -67,6 +67,8 @@ Rummikub có 2 tab trên trang chủ: **“Chuẩn · truyền thống”** (106
 
 AI chơi với máy có 3 cấp, chọn ở ô “🎯 Độ khó AI” (lưu trong `localStorage.rkailevel`): **Dễ · Bống** (tìm kiếm nông, thỉnh thoảng bỏ lượt), **Trung bình · Bình** (mặc định, tìm kiếm 20.000 nút) và **Khó · Túc** (tìm kiếm 200.000 nút, ưu tiên nhóm nhiều điểm, thử nối thêm quân nhiều vòng). Tên cấp được gắn vào tên bot trong bàn chơi.
 
+Nút **“Sắp theo số / Sắp theo màu”** luôn có trên bàn chơi, kể cả khi đang là lượt của đối phương. Khi không phải lượt của bạn, hai nút này chỉ đổi **thứ tự hiển thị** trên giá (`RK`), không đụng vào nước đi hay trạng thái ván — nên bạn có thể sắp sẵn ngay sau khi rút bài để chuẩn bị lượt sau.
+
 Rummikub và Hội Nhẫn đều có ô **“Phòng đang mở”** ngay trên màn hình chính: liệt kê tối đa 20 phòng còn hoạt động (chưa bắt đầu ván, tạo trong 30 phút gần đây), tự làm mới mỗi 10 giây. Bấm vào một phòng là tự điền mã phòng và vào chơi — bạn bè không cần nhớ/gõ mã. Ở Rummikub, danh sách được lọc riêng theo tab đang chọn.
 
 - Rummikub đọc `rummikub/rooms/` bằng REST, hiển thị mã + tên chủ phòng + số người.
