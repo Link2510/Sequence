@@ -63,7 +63,9 @@ Riêng game Hội Nhẫn có `fotr\CAP-NHAT-FOTR.bat` (file **local**, nằm tro
 
 ### Phòng đang mở
 
-Rummikub và Hội Nhẫn đều có ô **“Phòng đang mở”** ngay trên màn hình chính: liệt kê tối đa 20 phòng còn hoạt động (chưa bắt đầu ván, tạo trong 30 phút gần đây), tự làm mới mỗi 10 giây. Bấm vào một phòng là tự điền mã phòng và vào chơi — bạn bè không cần nhớ/gõ mã.
+Rummikub có 2 tab trên trang chủ: **“Chuẩn · truyền thống”** (106 quân, 2 joker) và **“🌀 Twist”** (112 quân, 8 joker đặc biệt). Mỗi tab đều có riêng: tạo phòng với bạn bè, vào phòng bằng mã, chơi với AI (1–3 máy) và danh sách phòng đang mở. Chế độ được lưu thẳng vào phòng; vào nhầm tab sẽ bị từ chối và nhắc sang tab đúng. Luật/động tác kéo thả, hiệu ứng quân bài giữ nguyên như trước.
+
+Rummikub và Hội Nhẫn đều có ô **“Phòng đang mở”** ngay trên màn hình chính: liệt kê tối đa 20 phòng còn hoạt động (chưa bắt đầu ván, tạo trong 30 phút gần đây), tự làm mới mỗi 10 giây. Bấm vào một phòng là tự điền mã phòng và vào chơi — bạn bè không cần nhớ/gõ mã. Ở Rummikub, danh sách được lọc riêng theo tab đang chọn.
 
 - Rummikub đọc `rummikub/rooms/` bằng REST, hiển thị mã + tên chủ phòng + số người.
 - Hội Nhẫn đọc `lotr-fotr-rooms/` bằng REST (`fotr/js/room-list.js`), hiển thị mã 6 ký tự + số người; chỉ hiện phòng chưa có khách (`guestJoined` chưa true).
