@@ -76,6 +76,8 @@ const jt=i=>i<104?-1:i<106?0:i<108?1:i<110?2:3;
 const hv=a=>a.reduce((x,i)=>x+(i>103?(jt(i)==3?0:30):i%13+1),0);
 const TLS=[[0,'Không giới hạn'],[30,'30 giây'],[60,'60 giây'],[90,'90 giây'],[120,'2 phút'],[180,'3 phút']];
 const tlOpts=v=>TLS.map(([x,l])=>`<option value="${x}" ${(v||0)==x?'selected':''}>${l}</option>`).join('');
+const AI_LEVELS=[{v:0,name:'Bống',label:'Dễ'},{v:1,name:'Bình',label:'Trung bình'},{v:2,name:'Túc',label:'Khó'}];
+const aiOpts=v=>AI_LEVELS.map(a=>`<option value="${a.v}" ${(+v||0)===a.v?'selected':''}>${a.label} · ${a.name}</option>`).join('');
 const tlSel=h=>h?`<div class="row" style="justify-content:center"><span>⏱ Thời gian mỗi lượt</span><select onchange="setTL(this.value)" class="sel">${tlOpts(R.tl)}</select></div>`:`<p>⏱ Mỗi lượt: ${(TLS.find(x=>x[0]==(R.tl||0))||TLS[0])[1]}</p>`;
 const modeSel=()=>`<p>🎮 Chế độ: ${R.mode==2?'🌀 Twist (joker đặc biệt)':'Chuẩn'}</p>`;
 function setMode(v){R.mode=+v;api(room,'PATCH',{mode:+v,t:Date.now()})}
@@ -144,23 +146,35 @@ function mkGame(ids,pv,tl,md){ids=ids.slice().sort(()=>Math.random()-.5);const d
  return {o:ids,h,pool:d,tb:[],m:{},t:0,v:1,k:Date.now(),w:null,log:'Ván mới bắt đầu!',sc,r:(pv&&pv.r||0)+1,mode:md||0,tl:tl||0,dl:tl?Date.now()+tl*1000:0}}
 async function start(){const g=mkGame(Object.keys(R.p),G,R.tl,R.mode);HL=[];if(L){G=g;W=null;tick()}else await api(room,'PATCH',{g:JSON.stringify(g),s:'play',t:Date.now()})}
 function bot(md){name=$('#nm').value.trim();if(!name)return msg('Nhập tên của bạn trước nhé');localStorage.rkname=name;md=+md||0;
- if(es)es.close();L=1;G=null;room='MAY';V='game';M='';R={h:me,s:'play',mode:md,tl:+$('#tl2-'+md).value,p:{[me]:name}};for(let i=1;i<=+$('#nb-'+md).value;i++)R.p['b'+i]='🤖 Máy '+i;start()}
+ const sel=document.getElementById('ailvl'),lvl=sel?+sel.value:+((localStorage.rkailevel||1)|0);localStorage.rkailevel=lvl;
+ const ai=AI_LEVELS[lvl]||AI_LEVELS[1];
+ if(es)es.close();L=1;G=null;room='MAY';V='game';M='';R={h:me,s:'play',mode:md,tl:+$('#tl2-'+md).value,aiLevel:lvl,p:{[me]:name}};
+ const nb=+$('#nb-'+md).value;for(let i=1;i<=nb;i++)R.p['b'+i]='🤖 '+ai.name+(nb>1?' '+i:'')+' · '+ai.label;
+ start();if(G)G.aiLevel=lvl}
 function tick(){S=[];setup();render();if(L&&G&&!G.w&&G.o[G.t]!=me)setTimeout(botMove,500)}
 async function cleanup(){try{const ks=await fetch(B.slice(0,-1)+'.json?shallow=true').then(r=>r.json());for(const c in ks||{}){const t=await api(c+'/t');if(!t||Date.now()-t>TTL)api(c,'DELETE')}}catch(e){}}
 /* ---------- máy chơi ---------- */
-function bestPlace(hand,need){const cnt=Array(52).fill(0);hand.forEach(i=>{if(i<104)cnt[i%52]++});const C=[];
+function bestPlace(hand,need,maxNodes){const cnt=Array(52).fill(0);hand.forEach(i=>{if(i<104)cnt[i%52]++});const C=[];
  for(let c=0;c<4;c++)for(let a=0;a<13;a++){let b=a;while(b<13&&cnt[c*13+b])b++;for(let e=a+2;e<b;e++){const s=[];for(let x=a;x<=e;x++)s.push(c*13+x);C.push({s,p:(a+e+2)*(e-a+1)/2})}}
  for(let n=0;n<13;n++){const cs=[0,1,2,3].filter(c=>cnt[c*13+n]);if(cs.length>=3){const al=[cs];if(cs.length==4)cs.forEach(o=>al.push(cs.filter(c=>c!=o)));al.forEach(g=>C.push({s:g.map(c=>c*13+n),p:(n+1)*g.length}))}}
  let best=[],bs=0,nodes=0;
- const go=(i,cur,pl,sum)=>{if(sum>=need&&pl>bs){bs=pl;best=cur.slice()}if(++nodes>20000)return;
+ const cap=maxNodes||20000;
+ const go=(i,cur,pl,sum)=>{if(sum>=need&&pl>bs){bs=pl;best=cur.slice()}if(++nodes>cap)return;
   for(let j=i;j<C.length;j++){const c=C[j];if(c.s.every(t=>cnt[t]>0)){c.s.forEach(t=>cnt[t]--);cur.push(c);go(j,cur,pl+c.s.length,sum+c.p);cur.pop();c.s.forEach(t=>cnt[t]++)}}};
  go(0,[],0,0);const pool=hand.slice();
  return best.map(c=>c.s.map(t=>{const x=pool.find(i=>i<104&&i%52==t);pool.splice(pool.indexOf(x),1);return x}))}
 function botMove(){if(!L||!G||G.w)return;const id=G.o[G.t];if(id==me)return;HL=[];
+ const lvl=+(G.aiLevel!=null?G.aiLevel:1),ai=AI_LEVELS[lvl]||AI_LEVELS[1];
  const h=G.h[id].slice(),tb=G.tb.map(q=>q.slice()),md=G.m[id],st=[],snap=(hl,txt)=>st.push({tb:tb.map(q=>q.slice()),h:h.slice(),hl,txt});
- for(const q of bestPlace(h,md?0:30)){tb.push(q);q.forEach(i=>h.splice(h.indexOf(i),1));snap(q.slice(),`đặt nhóm mới ${q.length} quân`)}
- if(md){let ch=1;while(ch){ch=0;for(const t of h.slice()){if(t>103&&h.length>1)continue;for(let x=0;x<tb.length;x++){const q=arr(tb[x].concat(t));if(pts(q)){tb[x]=q;h.splice(h.indexOf(t),1);snap([t],'nối thêm 1 quân vào một nhóm');ch=1;break}}}}}
- G.log=`${R.p[id]} đang suy nghĩ…`;render();let i=0;
+ const need=md?0:30,cap=lvl===0?300:lvl===2?200000:20000;
+ if(lvl===0&&Math.random()<0.25){G.log=`${R.p[id]} (${ai.label}) đang lúng túng…`;render();return setTimeout(()=>pass(id),900)}
+ let groups=bestPlace(h,need,cap);
+ if(lvl===0)groups=groups.length?[groups[Math.floor(Math.random()*groups.length)]]:[];
+ if(lvl===2)groups=groups.slice().sort((a,b)=>hv(b)-hv(a));
+ for(const q of groups){tb.push(q);q.forEach(i=>h.splice(h.indexOf(i),1));snap(q.slice(),`đặt nhóm mới ${q.length} quân`)}
+ if(lvl!==0&&md){let ch=1,rounds=lvl===2?4:1;
+  while(ch&&rounds-->0){ch=0;for(const t of h.slice()){if(t>103&&h.length>1)continue;for(let x=0;x<tb.length;x++){const q=arr(tb[x].concat(t));if(pts(q)){tb[x]=q;h.splice(h.indexOf(t),1);snap([t],'nối thêm 1 quân vào một nhóm');ch=1;break}}}}}
+ G.log=`${R.p[id]} (${ai.label}) đang suy nghĩ…`;render();let i=0;
  const go=()=>{if(!L||!G||G.w||G.o[G.t]!=id)return;
   if(i<st.length){const q=st[i++];G.tb=q.tb;G.h[id]=q.h;HL=q.hl.slice();G.log=`${R.p[id]} ${q.txt}`;render();return setTimeout(go,1100)}
   if(!st.length){G.log=`${R.p[id]} không đi được → rút bài`;render();return setTimeout(()=>pass(id),1000)}
@@ -214,7 +228,7 @@ function home(){
  <div class="card stack full"><h3>🌐 Phòng đang mở · ${label}</h3><div id="openRooms-${m}" style="opacity:.8;font-size:14px">Đang tải danh sách phòng…</div></div>
  </div>`;
  return `<div class="hero">${logo()}<p>Xếp bài, ghép bộ, hết quân trước để chiến thắng — chọn chế độ rồi chơi với bạn bè hoặc với máy.</p></div>
-<div class="home"><div class="card stack full"><h3>Tên của bạn</h3><input id="nm" maxlength="14" placeholder="VD: Minh" value="${esc(name)}"></div></div>
+<div class="home"><div class="card stack full"><h3>Tên của bạn</h3><input id="nm" maxlength="14" placeholder="VD: Minh" value="${esc(name)}"><div class="row"><span>🎯 Độ khó AI</span><select id="ailvl" class="sel" title="Độ khó máy chơi">${aiOpts(localStorage.rkailevel||1)}</select></div></div></div>
 <div class="tabs"><button class="tab ${HM===0?'on':''}" data-a="tab" data-k="0">Chuẩn · truyền thống</button><button class="tab ${HM===2?'on':''}" data-a="tab" data-k="2">🌀 Twist</button></div>
 <div class="home">${pane(0,'Chuẩn','106 quân: số 1–13 và 2 joker ☻. Luật cổ điển.')}${pane(2,'Twist','112 quân với 8 joker đặc biệt: ☻☻, 🎨, 🪞. Xem luật trong phòng.')}
 <div class="full" style="text-align:center"><button class="btn g" data-a="${HM===2?'rulesT':'rules'}">📖 Hướng dẫn chơi</button>${toast()}<p style="opacity:.55;font-size:13px;margin-top:8px">Phòng online tự xoá sau 30 phút không hoạt động.</p></div></div>`}
@@ -282,6 +296,7 @@ document.addEventListener('pointermove',e=>{if(!DG)return;if(!DG.on){if(Math.hyp
  DG.g.style.left=e.clientX-20+'px';DG.g.style.top=e.clientY-28+'px';DG.tg=target(document.elementFromPoint(e.clientX,e.clientY),e.clientX);hl()});
 const endDrag=ok=>{const f=DG;if(!f)return;DG=null;if(!f.on)return;f.g.remove();hl();JD=Date.now();ok?drop(f):render()};
 document.addEventListener('pointerup',()=>endDrag(1));document.addEventListener('pointercancel',()=>endDrag(0));
+document.addEventListener('change',e=>{if(e.target&&e.target.id==='ailvl')localStorage.rkailevel=e.target.value});
 document.addEventListener('click',e=>{if(Date.now()-JD<250)return;const t=e.target.closest('.t[data-i]');
  if(t&&t.closest('.mine,.set')&&myTurn()){tog(+t.dataset.i);return}
  const a=e.target.closest('[data-a]');if(a&&!['leaveRules'].includes(a.dataset.a))act(a.dataset.a,a.dataset.k)});
