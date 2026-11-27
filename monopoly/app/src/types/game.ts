@@ -136,3 +136,20 @@ export interface VictorySummary {
   label: string;
   description: string;
 }
+
+export interface MoneyTransferEvent {
+  id: string;
+  seq: number;
+  fromId: number | 'BANK';
+  toId: number | 'BANK';
+  amount: number;
+  reason: string;
+}
+
+export interface ChanceNoticeEvent {
+  id: string;
+  seq: number;
+  playerId: number;
+  card: ChanceCard;
+}
+

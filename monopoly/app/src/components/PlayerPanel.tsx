@@ -1,6 +1,6 @@
 import React from 'react';
-import { Anchor, Bot, Plane, ShieldAlert, User } from 'lucide-react';
-import { COLOR_GROUP_META, MONOPOLY_GROUPS } from '../data/boardData';
+import { Anchor, Bot, PartyPopper, Plane, ShieldAlert, User } from 'lucide-react';
+import { BOARD_TILES, COLOR_GROUP_META, MONOPOLY_GROUPS } from '../data/boardData';
 import { PLAYER_COLORS } from '../data/characters';
 import { Player, PropertyState } from '../types/game';
 import {
@@ -15,18 +15,23 @@ interface PlayerPanelProps {
   player: Player;
   isActive: boolean;
   ownership: Record<number, PropertyState>;
+  cashDelta?: { seq: number; amount: number } | null;
 }
 
 export const PlayerPanel: React.FC<PlayerPanelProps> = ({
   player,
   isActive,
   ownership,
+  cashDelta,
 }) => {
   const colorMeta = PLAYER_COLORS[player.color];
   const netWorth = calculateNetWorth(player, ownership);
   const ownedTiles = getPlayerOwnedTiles(player.id, ownership);
   const monopolies = getPlayerMonopolies(player.id, ownership);
   const resortCount = getPlayerResortCount(player.id, ownership);
+  const festivalTiles = BOARD_TILES.filter(
+    (t) => ownership[t.id]?.ownerId === player.id && ownership[t.id]?.hasFestival
+  );
 
   return (
     <div
@@ -84,10 +89,25 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
       {!player.bankrupt && (
         <>
           <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-white/10">
-            <div>
+            <div className="relative">
               <div className="text-[11px] text-slate-400">Tiền mặt</div>
-              <div className="font-mono-num text-sm font-bold text-emerald-300 mt-0.5">
-                {formatMoney(player.cash)}
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <div className="font-mono-num text-sm font-bold text-emerald-300">
+                  {formatMoney(player.cash)}
+                </div>
+                {cashDelta && cashDelta.amount !== 0 && (
+                  <span
+                    key={cashDelta.seq}
+                    className={`animate-cash-float-up font-mono-num text-[11px] font-extrabold px-1.5 py-0.5 rounded-md ${
+                      cashDelta.amount > 0
+                        ? 'bg-emerald-500/20 text-emerald-300'
+                        : 'bg-rose-500/25 text-rose-300'
+                    }`}
+                  >
+                    {cashDelta.amount > 0 ? '+' : '-'}
+                    {formatMoney(Math.abs(cashDelta.amount))}
+                  </span>
+                )}
               </div>
             </div>
             <div className="text-right">
@@ -144,8 +164,20 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
           </div>
 
           {/* Special Status Line */}
-          {(player.inJail || player.escapeCards > 0 || player.worldTourReady) && (
+          {(player.inJail ||
+            player.escapeCards > 0 ||
+            player.worldTourReady ||
+            festivalTiles.length > 0) && (
             <div className="mt-2.5 pt-2 border-t border-white/10 flex flex-wrap items-center gap-2 text-[11px]">
+              {festivalTiles.map((ft) => (
+                <span
+                  key={ft.id}
+                  className="text-amber-300 font-semibold flex items-center gap-1"
+                >
+                  <PartyPopper className="w-3 h-3 text-violet-300" />
+                  Lễ hội: {ft.shortName} (x2)
+                </span>
+              ))}
               {player.inJail && (
                 <span className="text-amber-300 flex items-center gap-1">
                   <Anchor className="w-3 h-3" />

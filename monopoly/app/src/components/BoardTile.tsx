@@ -7,7 +7,6 @@ import {
   PartyPopper,
   Plane,
   Receipt,
-  Sparkles,
 } from 'lucide-react';
 import { COLOR_GROUP_META, RESORT_RENTS } from '../data/boardData';
 import { PLAYER_COLORS } from '../data/characters';
@@ -42,6 +41,7 @@ export const BoardTile: React.FC<BoardTileProps> = ({
 
   const playersHere = players.filter((p) => !p.bankrupt && p.position === tile.id);
   const isInteractiveTarget = selectableForFestival || selectableForWorldTour;
+  const hasFestival = Boolean(prop?.hasFestival);
 
   const isCorner =
     tile.type === 'START' ||
@@ -118,22 +118,37 @@ export const BoardTile: React.FC<BoardTileProps> = ({
             ? 'text-slate-900 group-hover:border-amber-400'
             : 'bg-[#F8FAFC] text-slate-900 border-slate-300/90 group-hover:border-amber-400'
         } ${
+          hasFestival && !isInteractiveTarget
+            ? 'animate-festival-glow border-amber-400 z-10'
+            : ''
+        } ${
           isInteractiveTarget
             ? 'ring-2 ring-amber-400 shadow-lg shadow-amber-500/30 scale-[1.03] cursor-pointer'
             : 'cursor-default'
         }`}
       >
+        {/* Festive Background Overlay when hosting Festival */}
+        {hasFestival && (
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-violet-400/20 via-amber-300/20 to-amber-400/25" />
+        )}
+
         {/* Top Color Header for Properties & Resorts */}
         {!isCorner && groupMeta && (
           <div
-            className={`w-full h-2 sm:h-2.5 rounded-sm ${groupMeta.barBg} flex items-center justify-between px-1 shrink-0`}
+            className={`relative z-10 w-full h-2 sm:h-2.5 rounded-sm ${groupMeta.barBg} flex items-center justify-between px-1 shrink-0`}
+          />
+        )}
+
+        {/* Prominent Festival Badge */}
+        {hasFestival && (
+          <div
+            title="Đang tổ chức Lễ Hội — Tiền thuê x2"
+            className="pointer-events-none absolute top-0.5 right-0.5 z-20 flex items-center gap-0.5 px-1 sm:px-1.5 py-0.5 rounded-md bg-gradient-to-r from-violet-600 to-amber-500 text-white shadow-md border border-amber-200/80"
           >
-            {prop?.hasFestival && (
-              <span className="text-[8px] font-bold text-white leading-none flex items-center gap-0.5">
-                <Sparkles className="w-2 h-2" />
-                x2
-              </span>
-            )}
+            <PartyPopper className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />
+            <span className="font-mono-num text-[8px] sm:text-[10px] font-extrabold leading-none">
+              x2
+            </span>
           </div>
         )}
 
@@ -216,13 +231,18 @@ export const BoardTile: React.FC<BoardTileProps> = ({
             ) : null}
 
             {/* Price or Current Rent */}
-            <div className="flex items-center justify-between gap-1 mt-auto">
+            <div className="relative z-10 flex items-center justify-between gap-1 mt-auto">
               {owner && currentRent !== null ? (
                 <span
-                  className="font-mono-num text-[8px] sm:text-[9px] font-bold px-1 rounded text-white leading-tight"
+                  className={`font-mono-num text-[8px] sm:text-[9px] font-bold px-1 rounded text-white leading-tight flex items-center gap-0.5 ${
+                    hasFestival ? 'ring-1 ring-amber-300 shadow-sm' : ''
+                  }`}
                   style={{ backgroundColor: ownerColor?.hex }}
                 >
                   {formatMoney(currentRent)}
+                  {hasFestival && (
+                    <span className="text-amber-200 font-extrabold">x2</span>
+                  )}
                 </span>
               ) : (
                 <span className="font-mono-num text-[8px] sm:text-[9px] font-semibold text-slate-600 leading-tight">
@@ -370,19 +390,32 @@ export const BoardTile: React.FC<BoardTileProps> = ({
           )}
 
           {(tile.type === 'PROPERTY' || tile.type === 'RESORT') && (
-            <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
-              <span className="text-slate-400">Chủ sở hữu</span>
-              {owner ? (
-                <span className="font-semibold text-white flex items-center gap-1.5 truncate">
-                  <span
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ backgroundColor: ownerColor?.hex }}
-                  />
-                  {owner.name}
-                  {prop?.hasFestival ? ' (x2)' : ''}
-                </span>
-              ) : (
-                <span className="text-slate-400">Chưa có chủ</span>
+            <div className="mt-2 pt-2 border-t border-white/10 space-y-1.5 text-[11px]">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Chủ sở hữu</span>
+                {owner ? (
+                  <span className="font-semibold text-white flex items-center gap-1.5 truncate">
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: ownerColor?.hex }}
+                    />
+                    {owner.name}
+                  </span>
+                ) : (
+                  <span className="text-slate-400">Chưa có chủ</span>
+                )}
+              </div>
+
+              {hasFestival && (
+                <div className="flex items-center justify-between px-2 py-1 rounded-md bg-gradient-to-r from-violet-500/25 to-amber-500/25 border border-amber-400/50 text-amber-200 font-semibold">
+                  <span className="flex items-center gap-1">
+                    <PartyPopper className="w-3.5 h-3.5 text-amber-300" />
+                    Đang tổ chức Lễ Hội
+                  </span>
+                  <span className="font-mono-num font-extrabold text-amber-300">
+                    Thuê x2
+                  </span>
+                </div>
               )}
             </div>
           )}

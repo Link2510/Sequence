@@ -25,8 +25,10 @@ import { getCharacterById } from './data/characters';
 import {
   BoardTile,
   ChanceCard,
+  ChanceNoticeEvent,
   GamePhase,
   LogEntry,
+  MoneyTransferEvent,
   PendingModal,
   Player,
   PlayerColorKey,
@@ -130,10 +132,35 @@ export default function App() {
   );
   const wsRef = useRef<WebSocket | null>(null);
   const lastMoveSeqRef = useRef<number>(0);
+  const seenOnlineTransferSeqRef = useRef<number>(0);
+  const seenOnlineChanceSeqRef = useRef<number>(0);
 
-  // Track active extra turn flag across modal resolutions
+  // Visual transfer & Chance notification state (Local + Online)
+  const [moneyTransfers, setMoneyTransfers] = useState<MoneyTransferEvent[]>([]);
+  const [cashDeltas, setCashDeltas] = useState<
+    Record<number, { seq: number; amount: number }>
+  >({});
+  const [chanceNotice, setChanceNotice] = useState<ChanceNoticeEvent | null>(null);
+  const [onlineTransfers, setOnlineTransfers] = useState<MoneyTransferEvent[]>([]);
+  const [onlineCashDeltas, setOnlineCashDeltas] = useState<
+    Record<number, { seq: number; amount: number }>
+  >({});
+  const [onlineChanceNotice, setOnlineChanceNotice] =
+    useState<ChanceNoticeEvent | null>(null);
+
+  const transferSeqRef = useRef<number>(0);
+  const chanceSeqRef = useRef<number>(0);
+
+  // Track active extra turn flag and deferred post-liquidation callback
   const extraTurnRef = useRef<boolean>(false);
   const sessionRef = useRef<number>(0);
+  const pendingAfterPaidRef = useRef<
+    | ((
+        updatedPlayers: Player[],
+        updatedOwnership: Record<number, PropertyState>
+      ) => void)
+    | null
+  >(null);
 
   // Latest state refs for safe async operations
   const playersRef = useRef(players);
@@ -146,6 +173,106 @@ export default function App() {
   fastModeRef.current = fastMode;
   const onlineRoomRef = useRef(onlineRoom);
   onlineRoomRef.current = onlineRoom;
+
+  const commitPlayers = useCallback(
+    (updater: Player[] | ((prev: Player[]) => Player[])): Player[] => {
+      const next =
+        typeof updater === 'function' ? updater(playersRef.current) : updater;
+      playersRef.current = next;
+      setPlayers(next);
+      return next;
+    },
+    []
+  );
+
+  const commitOwnership = useCallback(
+    (
+      updater:
+        | Record<number, PropertyState>
+        | ((prev: Record<number, PropertyState>) => Record<number, PropertyState>)
+    ): Record<number, PropertyState> => {
+      const next =
+        typeof updater === 'function' ? updater(ownershipRef.current) : updater;
+      ownershipRef.current = next;
+      setOwnership(next);
+      return next;
+    },
+    []
+  );
+
+  const emitMoneyTransfer = useCallback(
+    (
+      fromId: number | 'BANK',
+      toId: number | 'BANK',
+      amount: number,
+      reason: string
+    ) => {
+      if (amount <= 0) return;
+      transferSeqRef.current += 1;
+      const seq = transferSeqRef.current;
+      const ev: MoneyTransferEvent = {
+        id: `tr-${seq}-${Date.now()}`,
+        seq,
+        fromId,
+        toId,
+        amount,
+        reason,
+      };
+      setMoneyTransfers((prev) => [...prev.slice(-2), ev]);
+      setTimeout(() => {
+        setMoneyTransfers((prev) => prev.filter((item) => item.id !== ev.id));
+      }, 2600);
+
+      if (fromId !== 'BANK') {
+        setCashDeltas((prev) => ({
+          ...prev,
+          [fromId]: { seq, amount: -amount },
+        }));
+        setTimeout(() => {
+          setCashDeltas((prev) => {
+            if (prev[fromId]?.seq !== seq) return prev;
+            const copy = { ...prev };
+            delete copy[fromId];
+            return copy;
+          });
+        }, 2200);
+      }
+
+      if (toId !== 'BANK') {
+        setCashDeltas((prev) => ({
+          ...prev,
+          [toId]: { seq: seq + 0.5, amount },
+        }));
+        setTimeout(() => {
+          setCashDeltas((prev) => {
+            if (prev[toId]?.seq !== seq + 0.5) return prev;
+            const copy = { ...prev };
+            delete copy[toId];
+            return copy;
+          });
+        }, 2200);
+      }
+    },
+    []
+  );
+
+  const showChanceNotice = useCallback(
+    (playerId: number, card: ChanceCard) => {
+      chanceSeqRef.current += 1;
+      const seq = chanceSeqRef.current;
+      const ev: ChanceNoticeEvent = {
+        id: `ch-${seq}-${Date.now()}`,
+        seq,
+        playerId,
+        card,
+      };
+      setChanceNotice(ev);
+      setTimeout(() => {
+        setChanceNotice((prev) => (prev?.id === ev.id ? null : prev));
+      }, 3800);
+    },
+    []
+  );
 
   const sendWsMessage = useCallback((msg: ClientWsMessage) => {
     const raw = JSON.stringify(msg);
@@ -268,6 +395,80 @@ export default function App() {
     };
   }, [onlineRoom?.game?.lastMove]);
 
+  // Reset online animation cursors when leaving or returning to waiting room
+  useEffect(() => {
+    if (!onlineRoom || onlineRoom.status === 'WAITING') {
+      seenOnlineTransferSeqRef.current = 0;
+      seenOnlineChanceSeqRef.current = 0;
+      setOnlineTransfers([]);
+      setOnlineCashDeltas({});
+      setOnlineChanceNotice(null);
+    }
+  }, [onlineRoom]);
+
+  // Sync online money transfers to central banner & PlayerPanel delta badges
+  useEffect(() => {
+    const transfers = onlineRoom?.game?.recentTransfers;
+    if (!transfers || transfers.length === 0) return;
+
+    const fresh = transfers.filter(
+      (t) => t.seq > seenOnlineTransferSeqRef.current
+    );
+    if (fresh.length === 0) return;
+    seenOnlineTransferSeqRef.current = fresh[fresh.length - 1].seq;
+
+    for (const ev of fresh) {
+      setOnlineTransfers((prev) => [...prev.slice(-2), ev]);
+      setTimeout(() => {
+        setOnlineTransfers((prev) => prev.filter((item) => item.id !== ev.id));
+      }, 2600);
+
+      if (ev.fromId !== 'BANK') {
+        const fromId = ev.fromId;
+        setOnlineCashDeltas((prev) => ({
+          ...prev,
+          [fromId]: { seq: ev.seq, amount: -ev.amount },
+        }));
+        setTimeout(() => {
+          setOnlineCashDeltas((prev) => {
+            if (prev[fromId]?.seq !== ev.seq) return prev;
+            const copy = { ...prev };
+            delete copy[fromId];
+            return copy;
+          });
+        }, 2200);
+      }
+
+      if (ev.toId !== 'BANK') {
+        const toId = ev.toId;
+        setOnlineCashDeltas((prev) => ({
+          ...prev,
+          [toId]: { seq: ev.seq + 0.5, amount: ev.amount },
+        }));
+        setTimeout(() => {
+          setOnlineCashDeltas((prev) => {
+            if (prev[toId]?.seq !== ev.seq + 0.5) return prev;
+            const copy = { ...prev };
+            delete copy[toId];
+            return copy;
+          });
+        }, 2200);
+      }
+    }
+  }, [onlineRoom?.game?.recentTransfers]);
+
+  // Sync online Chance card events so ALL players see the Chance announcement banner
+  useEffect(() => {
+    const ev = onlineRoom?.game?.lastChanceEvent;
+    if (!ev || ev.seq <= seenOnlineChanceSeqRef.current) return;
+    seenOnlineChanceSeqRef.current = ev.seq;
+    setOnlineChanceNotice(ev);
+    const timer = setTimeout(() => {
+      setOnlineChanceNotice((prev) => (prev?.id === ev.id ? null : prev));
+    }, 4200);
+    return () => clearTimeout(timer);
+  }, [onlineRoom?.game?.lastChanceEvent]);
+
   const addLog = useCallback(
     (text: string, tone: LogEntry['tone'] = 'neutral') => {
       setLogs((prev) => [
@@ -282,6 +483,7 @@ export default function App() {
     (slots: PlayerSlotConfig[], startingCash: number) => {
       sessionRef.current += 1;
       extraTurnRef.current = false;
+      pendingAfterPaidRef.current = null;
 
       const initialPlayers: Player[] = slots.map((slot, idx) => {
         const char = getCharacterById(slot.characterId);
@@ -304,8 +506,9 @@ export default function App() {
       });
 
       setLastConfig({ slots, startingCash });
-      setPlayers(initialPlayers);
-      setOwnership({});
+      commitPlayers(initialPlayers);
+      commitOwnership({});
+      currentIdxRef.current = 0;
       setCurrentPlayerIndex(0);
       setTurnStep('WAIT_ROLL');
       setDice([1, 6]);
@@ -314,6 +517,9 @@ export default function App() {
       setPendingModal(null);
       setInspectedTile(null);
       setVictory(null);
+      setMoneyTransfers([]);
+      setCashDeltas({});
+      setChanceNotice(null);
       setLogs([
         {
           id: 'init',
@@ -323,7 +529,7 @@ export default function App() {
       ]);
       setPhase('PLAYING');
     },
-    []
+    [commitOwnership, commitPlayers]
   );
 
   const evaluateVictory = useCallback(
@@ -375,6 +581,7 @@ export default function App() {
         guard += 1;
       }
 
+      currentIdxRef.current = nextIdx;
       setCurrentPlayerIndex(nextIdx);
       setTurnStep('WAIT_ROLL');
     },
@@ -410,15 +617,16 @@ export default function App() {
       );
 
       extraTurnRef.current = false;
-      setPlayers(nextPlayers);
-      setOwnership(nextOwnership);
+      pendingAfterPaidRef.current = null;
+      commitPlayers(nextPlayers);
+      commitOwnership(nextOwnership);
       setPendingModal(null);
 
       if (!evaluateVictory(nextPlayers, nextOwnership)) {
         advanceTurn(nextPlayers, nextOwnership);
       }
     },
-    [addLog, advanceTurn, evaluateVictory]
+    [addLog, advanceTurn, commitOwnership, commitPlayers, evaluateVictory]
   );
 
   const chargePlayer = useCallback(
@@ -442,15 +650,18 @@ export default function App() {
         if (creditorId !== null) sfx.pay();
         else sfx.pay();
 
-        const nextPlayers = pList.map((p) => {
-          if (p.id === playerId) return { ...p, cash: p.cash - amount };
-          if (creditorId !== null && p.id === creditorId) {
-            return { ...p, cash: p.cash + amount };
-          }
-          return p;
-        });
+        const nextPlayers = commitPlayers(
+          pList.map((p) => {
+            if (p.id === playerId) return { ...p, cash: p.cash - amount };
+            if (creditorId !== null && p.id === creditorId) {
+              return { ...p, cash: p.cash + amount };
+            }
+            return p;
+          })
+        );
+        emitMoneyTransfer(playerId, creditorId ?? 'BANK', amount, reason);
+        pendingAfterPaidRef.current = null;
 
-        setPlayers(nextPlayers);
         if (afterPaid) {
           afterPaid(nextPlayers, own);
         } else {
@@ -475,6 +686,7 @@ export default function App() {
           const sellVal = calculateSellValue(tile, prop);
           workingCash += sellVal;
           delete workingOwnership[tile.id];
+          emitMoneyTransfer('BANK', playerId, sellVal, `Bán ${tile.name}`);
           addLog(
             `${payer.name} bán ${tile.name} thu về ${formatMoney(sellVal)} để trả nợ.`,
             'warn'
@@ -482,15 +694,18 @@ export default function App() {
         }
 
         if (workingCash >= amount) {
-          const nextPlayers = pList.map((p) => {
-            if (p.id === playerId) return { ...p, cash: workingCash - amount };
-            if (creditorId !== null && p.id === creditorId) {
-              return { ...p, cash: p.cash + amount };
-            }
-            return p;
-          });
-          setPlayers(nextPlayers);
-          setOwnership(workingOwnership);
+          const nextPlayers = commitPlayers(
+            pList.map((p) => {
+              if (p.id === playerId) return { ...p, cash: workingCash - amount };
+              if (creditorId !== null && p.id === creditorId) {
+                return { ...p, cash: p.cash + amount };
+              }
+              return p;
+            })
+          );
+          commitOwnership(workingOwnership);
+          emitMoneyTransfer(playerId, creditorId ?? 'BANK', amount, reason);
+          pendingAfterPaidRef.current = null;
           if (afterPaid) {
             afterPaid(nextPlayers, workingOwnership);
           } else {
@@ -498,10 +713,10 @@ export default function App() {
           }
         } else {
           // AI Bankrupt
-          setPlayers((prev) =>
+          commitPlayers((prev) =>
             prev.map((p) => (p.id === playerId ? { ...p, cash: workingCash } : p))
           );
-          setOwnership(workingOwnership);
+          commitOwnership(workingOwnership);
           eliminatePlayer(playerId, creditorId, reason);
         }
         return;
@@ -514,6 +729,7 @@ export default function App() {
         return;
       }
 
+      pendingAfterPaidRef.current = afterPaid ?? null;
       setPendingModal({
         type: 'LIQUIDATE',
         amountOwed: amount,
@@ -521,7 +737,14 @@ export default function App() {
         reason,
       });
     },
-    [addLog, advanceTurn, eliminatePlayer]
+    [
+      addLog,
+      advanceTurn,
+      commitOwnership,
+      commitPlayers,
+      eliminatePlayer,
+      emitMoneyTransfer,
+    ]
   );
 
   // Move pawn step by step along the 32-tile perimeter
@@ -551,7 +774,7 @@ export default function App() {
           sfx.cashIn();
         }
 
-        setPlayers((prev) =>
+        commitPlayers((prev) =>
           prev.map((p) => {
             if (p.id !== playerId) return p;
             return {
@@ -565,6 +788,7 @@ export default function App() {
         if (salaryEarned) {
           const pName =
             playersRef.current.find((p) => p.id === playerId)?.name ?? '';
+          emitMoneyTransfer('BANK', playerId, START_SALARY, 'Lương qua ô Bắt Đầu');
           addLog(
             `${pName} đi qua ô BẮT ĐẦU, nhận +${formatMoney(START_SALARY)}.`,
             'good'
@@ -575,7 +799,7 @@ export default function App() {
       setMovingPlayerId(null);
       return pos;
     },
-    [addLog]
+    [addLog, commitPlayers, emitMoneyTransfer]
   );
 
   const resolveTileLanding = useCallback(
@@ -602,12 +826,13 @@ export default function App() {
       if (tile.type === 'LOST_ISLAND') {
         sfx.alert();
         extraTurnRef.current = false;
-        const nextPlayers = playersRef.current.map((p) =>
-          p.id === playerId
-            ? { ...p, inJail: true, jailTurns: 0, doublesStreak: 0 }
-            : p
+        const nextPlayers = commitPlayers(
+          playersRef.current.map((p) =>
+            p.id === playerId
+              ? { ...p, inJail: true, jailTurns: 0, doublesStreak: 0 }
+              : p
+          )
         );
-        setPlayers(nextPlayers);
         addLog(`${actor.name} bị lạc vào Đảo Hoang!`, 'warn');
         await sleep(350);
         if (sessionRef.current !== mySession) return;
@@ -618,10 +843,11 @@ export default function App() {
       // 3. WORLD TOUR (Airport)
       if (tile.type === 'WORLD_TOUR') {
         sfx.cashIn();
-        const nextPlayers = playersRef.current.map((p) =>
-          p.id === playerId ? { ...p, worldTourReady: true } : p
+        const nextPlayers = commitPlayers(
+          playersRef.current.map((p) =>
+            p.id === playerId ? { ...p, worldTourReady: true } : p
+          )
         );
-        setPlayers(nextPlayers);
         addLog(
           `${actor.name} đến sân bay DU LỊCH — lượt sau có thể bay đến bất kỳ ô nào!`,
           'good'
@@ -664,7 +890,7 @@ export default function App() {
               ...nextOwnership[targetId],
               hasFestival: true,
             };
-            setOwnership(nextOwnership);
+            commitOwnership(nextOwnership);
             addLog(
               `${actor.name} tổ chức Lễ Hội x2 tiền thuê tại ${targetTile.name}!`,
               'good'
@@ -701,8 +927,9 @@ export default function App() {
         const card =
           CHANCE_CARDS[Math.floor(Math.random() * CHANCE_CARDS.length)];
         if (actor.isAI) {
+          showChanceNotice(playerId, card);
           addLog(`${actor.name} rút Thẻ Cơ Hội: ${card.title}.`, 'neutral');
-          await sleep(aiPause);
+          await sleep(fastModeRef.current ? 850 : 1650);
           if (sessionRef.current !== mySession) return;
           await applyChanceCard(playerId, card);
         } else {
@@ -747,8 +974,9 @@ export default function App() {
                 hasFestival: false,
               },
             };
-            setPlayers(nextPlayers);
-            setOwnership(nextOwnership);
+            commitPlayers(nextPlayers);
+            commitOwnership(nextOwnership);
+            emitMoneyTransfer(playerId, 'BANK', cost, `Mua ${tile.name}`);
             addLog(
               `${actor.name} mua ${tile.name}${
                 effectiveLevel > 0 ? ` (+${effectiveLevel} nhà)` : ''
@@ -791,8 +1019,9 @@ export default function App() {
               ...ownershipRef.current,
               [tile.id]: { ...prop, level: nextLvl },
             };
-            setPlayers(nextPlayers);
-            setOwnership(nextOwnership);
+            commitPlayers(nextPlayers);
+            commitOwnership(nextOwnership);
+            emitMoneyTransfer(playerId, 'BANK', cost, `Nâng cấp ${tile.name}`);
             addLog(
               `${actor.name} nâng cấp ${tile.name} lên ${
                 nextLvl === 4 ? 'Khách Sạn 5★' : `${nextLvl} nhà`
@@ -860,8 +1089,14 @@ export default function App() {
                 ...afterOwnership,
                 [tile.id]: { ...prop, ownerId: playerId },
               };
-              setPlayers(boughtPlayers);
-              setOwnership(boughtOwnership);
+              commitPlayers(boughtPlayers);
+              commitOwnership(boughtOwnership);
+              emitMoneyTransfer(
+                playerId,
+                prop.ownerId,
+                buyoutPrice,
+                `Thâu tóm ${tile.name}`
+              );
               addLog(
                 `${payerAfter.name} thâu tóm lại ${tile.name} với giá ${formatMoney(buyoutPrice)}!`,
                 'warn'
@@ -896,10 +1131,12 @@ export default function App() {
         case 'GAIN': {
           sfx.cashIn();
           const gain = card.amount ?? 1000;
-          const nextPlayers = playersRef.current.map((p) =>
-            p.id === playerId ? { ...p, cash: p.cash + gain } : p
+          const nextPlayers = commitPlayers(
+            playersRef.current.map((p) =>
+              p.id === playerId ? { ...p, cash: p.cash + gain } : p
+            )
           );
-          setPlayers(nextPlayers);
+          emitMoneyTransfer('BANK', playerId, gain, `Cơ Hội: ${card.title}`);
           addLog(`${actor.name} nhận +${formatMoney(gain)} (${card.title}).`, 'good');
           advanceTurn(nextPlayers);
           break;
@@ -912,10 +1149,11 @@ export default function App() {
         }
         case 'ESCAPE_CARD': {
           sfx.cashIn();
-          const nextPlayers = playersRef.current.map((p) =>
-            p.id === playerId ? { ...p, escapeCards: p.escapeCards + 1 } : p
+          const nextPlayers = commitPlayers(
+            playersRef.current.map((p) =>
+              p.id === playerId ? { ...p, escapeCards: p.escapeCards + 1 } : p
+            )
           );
-          setPlayers(nextPlayers);
           addLog(`${actor.name} nhận được 1 Thẻ Thoát Đảo Hoang.`, 'good');
           advanceTurn(nextPlayers);
           break;
@@ -923,12 +1161,13 @@ export default function App() {
         case 'GO_JAIL': {
           sfx.alert();
           extraTurnRef.current = false;
-          const nextPlayers = playersRef.current.map((p) =>
-            p.id === playerId
-              ? { ...p, position: 8, inJail: true, jailTurns: 0, doublesStreak: 0 }
-              : p
+          const nextPlayers = commitPlayers(
+            playersRef.current.map((p) =>
+              p.id === playerId
+                ? { ...p, position: 8, inJail: true, jailTurns: 0, doublesStreak: 0 }
+                : p
+            )
           );
-          setPlayers(nextPlayers);
           addLog(`${actor.name} gặp bão, bị đưa thẳng ra Đảo Hoang!`, 'bad');
           advanceTurn(nextPlayers);
           break;
@@ -964,11 +1203,10 @@ export default function App() {
               oppBuilt[Math.floor(Math.random() * oppBuilt.length)];
             const tid = Number(tileStr);
             const targetTile = getTileById(tid);
-            const nextOwnership = {
+            const nextOwnership = commitOwnership({
               ...ownershipRef.current,
               [tid]: { ...prop, level: (prop.level - 1) as 0 | 1 | 2 | 3 },
-            };
-            setOwnership(nextOwnership);
+            });
             sfx.alert();
             addLog(
               `Bão làm ${targetTile.name} bị hạ xuống cấp ${prop.level - 1} nhà!`,
@@ -994,7 +1232,15 @@ export default function App() {
         }
       }
     },
-    [addLog, advanceTurn, chargePlayer, movePlayerSteps, resolveTileLanding]
+    [
+      addLog,
+      advanceTurn,
+      chargePlayer,
+      commitOwnership,
+      commitPlayers,
+      movePlayerSteps,
+      resolveTileLanding,
+    ]
   );
 
   // Execute a dice roll (normal turn OR jail escape roll)
@@ -1014,10 +1260,11 @@ export default function App() {
           const destTile = getTileById(destId);
           addLog(`${actor.name} bay thẳng từ Du Lịch tới ${destTile.name}!`, 'good');
 
-          const nextPlayers = playersRef.current.map((p) =>
-            p.id === actor.id ? { ...p, worldTourReady: false } : p
+          commitPlayers(
+            playersRef.current.map((p) =>
+              p.id === actor.id ? { ...p, worldTourReady: false } : p
+            )
           );
-          setPlayers(nextPlayers);
 
           const total = BOARD_TILES.length;
           const steps = (destId - actor.position + total) % total || total;
@@ -1062,12 +1309,13 @@ export default function App() {
             `${actor.name} tung ra Đôi ${d1}+${d2} và thoát khỏi Đảo Hoang!`,
             'good'
           );
-          const nextPlayers = playersRef.current.map((p) =>
-            p.id === actor.id
-              ? { ...p, inJail: false, jailTurns: 0, doublesStreak: 0 }
-              : p
+          commitPlayers(
+            playersRef.current.map((p) =>
+              p.id === actor.id
+                ? { ...p, inJail: false, jailTurns: 0, doublesStreak: 0 }
+                : p
+            )
           );
-          setPlayers(nextPlayers);
           extraTurnRef.current = false;
           const landed = await movePlayerSteps(actor.id, totalSteps, true);
           if (sessionRef.current !== mySession) return;
@@ -1079,10 +1327,14 @@ export default function App() {
               `${actor.name} hết 3 lượt ở Đảo Hoang, buộc phải trả ${formatMoney(JAIL_BAIL)} phí tàu để rời đảo.`,
               'warn'
             );
-            const nextPlayers = playersRef.current.map((p) =>
-              p.id === actor.id ? { ...p, inJail: false, jailTurns: 0 } : p
+            commitPlayers(
+              playersRef.current.map((p) =>
+                p.id === actor.id
+                  ? { ...p, inJail: false, jailTurns: 0, doublesStreak: 0 }
+                  : p
+              )
             );
-            setPlayers(nextPlayers);
+            extraTurnRef.current = false;
             chargePlayer(
               actor.id,
               JAIL_BAIL,
@@ -1095,10 +1347,11 @@ export default function App() {
               }
             );
           } else {
-            const nextPlayers = playersRef.current.map((p) =>
-              p.id === actor.id ? { ...p, jailTurns: newJailTurns } : p
+            const nextPlayers = commitPlayers(
+              playersRef.current.map((p) =>
+                p.id === actor.id ? { ...p, jailTurns: newJailTurns } : p
+              )
             );
-            setPlayers(nextPlayers);
             addLog(
               `${actor.name} tung ${d1}+${d2} (không ra Đôi), tiếp tục ở lại Đảo Hoang (${newJailTurns}/3).`,
               'neutral'
@@ -1115,12 +1368,13 @@ export default function App() {
         if (streak >= 3) {
           sfx.alert();
           extraTurnRef.current = false;
-          const nextPlayers = playersRef.current.map((p) =>
-            p.id === actor.id
-              ? { ...p, position: 8, inJail: true, jailTurns: 0, doublesStreak: 0 }
-              : p
+          const nextPlayers = commitPlayers(
+            playersRef.current.map((p) =>
+              p.id === actor.id
+                ? { ...p, position: 8, inJail: true, jailTurns: 0, doublesStreak: 0 }
+                : p
+            )
           );
-          setPlayers(nextPlayers);
           addLog(
             `${actor.name} tung Đôi 3 lần liên tiếp! Bị đưa thẳng ra Đảo Hoang.`,
             'bad'
@@ -1129,14 +1383,14 @@ export default function App() {
           return;
         }
         extraTurnRef.current = true;
-        setPlayers((prev) =>
+        commitPlayers((prev) =>
           prev.map((p) =>
             p.id === actor.id ? { ...p, doublesStreak: streak } : p
           )
         );
       } else {
         extraTurnRef.current = false;
-        setPlayers((prev) =>
+        commitPlayers((prev) =>
           prev.map((p) => (p.id === actor.id ? { ...p, doublesStreak: 0 } : p))
         );
       }
@@ -1156,6 +1410,7 @@ export default function App() {
       addLog,
       advanceTurn,
       chargePlayer,
+      commitPlayers,
       movePlayerSteps,
       resolveTileLanding,
     ]
@@ -1190,29 +1445,32 @@ export default function App() {
       if (actor.inJail) {
         if (actor.escapeCards > 0) {
           sfx.cashIn();
-          const nextPlayers = playersRef.current.map((p) =>
-            p.id === actor.id
-              ? {
-                  ...p,
-                  inJail: false,
-                  jailTurns: 0,
-                  escapeCards: p.escapeCards - 1,
-                }
-              : p
+          commitPlayers(
+            playersRef.current.map((p) =>
+              p.id === actor.id
+                ? {
+                    ...p,
+                    inJail: false,
+                    jailTurns: 0,
+                    escapeCards: p.escapeCards - 1,
+                  }
+                : p
+            )
           );
-          setPlayers(nextPlayers);
           addLog(`${actor.name} dùng Thẻ Thoát Đảo miễn phí.`, 'good');
           executeDiceRoll(false);
           return;
         }
         if (actor.cash >= JAIL_BAIL + 1000) {
           sfx.pay();
-          const nextPlayers = playersRef.current.map((p) =>
-            p.id === actor.id
-              ? { ...p, inJail: false, jailTurns: 0, cash: p.cash - JAIL_BAIL }
-              : p
+          commitPlayers(
+            playersRef.current.map((p) =>
+              p.id === actor.id
+                ? { ...p, inJail: false, jailTurns: 0, cash: p.cash - JAIL_BAIL }
+                : p
+            )
           );
-          setPlayers(nextPlayers);
+          emitMoneyTransfer(actor.id, 'BANK', JAIL_BAIL, 'Phí rời Đảo Hoang');
           addLog(
             `${actor.name} trả ${formatMoney(JAIL_BAIL)} rời Đảo Hoang.`,
             'warn'
@@ -1230,7 +1488,9 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [
     addLog,
+    commitPlayers,
     currentPlayerIndex,
+    emitMoneyTransfer,
     executeDiceRoll,
     fastMode,
     pendingModal,
@@ -1310,22 +1570,23 @@ export default function App() {
         }
       }
       nextOwnership[tile.id] = { ...nextOwnership[tile.id], hasFestival: true };
-      setOwnership(nextOwnership);
+      commitOwnership(nextOwnership);
       addLog(
         `${actor.name} tổ chức Lễ Hội x2 tiền thuê tại ${tile.name}!`,
         'good'
       );
-      advanceTurn(players, nextOwnership);
+      advanceTurn(playersRef.current, nextOwnership);
       return;
     }
 
     if (turnStep === 'SELECT_WORLD_TOUR') {
       if (tile.id === 24) return;
       sfx.cashIn();
-      const nextPlayers = players.map((p) =>
-        p.id === actor.id ? { ...p, worldTourReady: false } : p
+      commitPlayers(
+        players.map((p) =>
+          p.id === actor.id ? { ...p, worldTourReady: false } : p
+        )
       );
-      setPlayers(nextPlayers);
       addLog(`${actor.name} bay thẳng tới ${tile.name}!`, 'good');
 
       const total = BOARD_TILES.length;
@@ -1347,20 +1608,21 @@ export default function App() {
     if (currentPlayer.cash < cost) return;
 
     sfx.buy();
-    const nextPlayers = players.map((p) =>
-      p.id === currentPlayer.id ? { ...p, cash: p.cash - cost } : p
+    const nextPlayers = commitPlayers(
+      players.map((p) =>
+        p.id === currentPlayer.id ? { ...p, cash: p.cash - cost } : p
+      )
     );
-    const nextOwnership: Record<number, PropertyState> = {
+    const nextOwnership = commitOwnership({
       ...ownership,
       [tileId]: {
         ownerId: currentPlayer.id,
         level: effectiveLevel,
         hasFestival: false,
       },
-    };
-    setPlayers(nextPlayers);
-    setOwnership(nextOwnership);
+    });
     setPendingModal(null);
+    emitMoneyTransfer(currentPlayer.id, 'BANK', cost, `Mua ${tile.name}`);
     addLog(
       `${currentPlayer.name} mua ${tile.name}${
         effectiveLevel > 0 ? ` (+${effectiveLevel} nhà)` : ''
@@ -1380,16 +1642,17 @@ export default function App() {
     if (currentPlayer.cash < cost) return;
 
     sfx.buy();
-    const nextPlayers = players.map((p) =>
-      p.id === currentPlayer.id ? { ...p, cash: p.cash - cost } : p
+    const nextPlayers = commitPlayers(
+      players.map((p) =>
+        p.id === currentPlayer.id ? { ...p, cash: p.cash - cost } : p
+      )
     );
-    const nextOwnership = {
+    const nextOwnership = commitOwnership({
       ...ownership,
       [tileId]: { ...prop, level: targetLevel },
-    };
-    setPlayers(nextPlayers);
-    setOwnership(nextOwnership);
+    });
     setPendingModal(null);
+    emitMoneyTransfer(currentPlayer.id, 'BANK', cost, `Nâng cấp ${tile.name}`);
     addLog(
       `${currentPlayer.name} nâng cấp ${tile.name} lên ${
         targetLevel === 4 ? 'Khách Sạn 5★' : `${targetLevel} nhà`
@@ -1407,18 +1670,24 @@ export default function App() {
     if (!prop || currentPlayer.cash < buyoutPrice) return;
 
     sfx.buy();
-    const nextPlayers = players.map((p) => {
-      if (p.id === currentPlayer.id) return { ...p, cash: p.cash - buyoutPrice };
-      if (p.id === prop.ownerId) return { ...p, cash: p.cash + buyoutPrice };
-      return p;
-    });
-    const nextOwnership = {
+    const nextPlayers = commitPlayers(
+      players.map((p) => {
+        if (p.id === currentPlayer.id) return { ...p, cash: p.cash - buyoutPrice };
+        if (p.id === prop.ownerId) return { ...p, cash: p.cash + buyoutPrice };
+        return p;
+      })
+    );
+    const nextOwnership = commitOwnership({
       ...ownership,
       [tileId]: { ...prop, ownerId: currentPlayer.id },
-    };
-    setPlayers(nextPlayers);
-    setOwnership(nextOwnership);
+    });
     setPendingModal(null);
+    emitMoneyTransfer(
+      currentPlayer.id,
+      prop.ownerId,
+      buyoutPrice,
+      `Thâu tóm ${tile.name}`
+    );
     addLog(
       `${currentPlayer.name} thâu tóm ${tile.name} với giá ${formatMoney(buyoutPrice)}!`,
       'warn'
@@ -1435,19 +1704,27 @@ export default function App() {
     if (pendingModal?.type !== 'CHANCE_CARD' || !currentPlayer) return;
     const card = pendingModal.card;
     setPendingModal(null);
+    showChanceNotice(currentPlayer.id, card);
     applyChanceCard(currentPlayer.id, card);
   };
 
   const handleJailPayBail = () => {
     if (!currentPlayer || currentPlayer.cash < JAIL_BAIL) return;
     sfx.pay();
-    const nextPlayers = players.map((p) =>
-      p.id === currentPlayer.id
-        ? { ...p, inJail: false, jailTurns: 0, cash: p.cash - JAIL_BAIL }
-        : p
+    commitPlayers(
+      players.map((p) =>
+        p.id === currentPlayer.id
+          ? { ...p, inJail: false, jailTurns: 0, cash: p.cash - JAIL_BAIL }
+          : p
+      )
     );
-    setPlayers(nextPlayers);
     setPendingModal(null);
+    emitMoneyTransfer(
+      currentPlayer.id,
+      'BANK',
+      JAIL_BAIL,
+      'Phí rời Đảo Hoang'
+    );
     addLog(
       `${currentPlayer.name} trả ${formatMoney(JAIL_BAIL)} rời Đảo Hoang.`,
       'warn'
@@ -1458,17 +1735,18 @@ export default function App() {
   const handleJailUseCard = () => {
     if (!currentPlayer || currentPlayer.escapeCards <= 0) return;
     sfx.cashIn();
-    const nextPlayers = players.map((p) =>
-      p.id === currentPlayer.id
-        ? {
-            ...p,
-            inJail: false,
-            jailTurns: 0,
-            escapeCards: p.escapeCards - 1,
-          }
-        : p
+    commitPlayers(
+      players.map((p) =>
+        p.id === currentPlayer.id
+          ? {
+              ...p,
+              inJail: false,
+              jailTurns: 0,
+              escapeCards: p.escapeCards - 1,
+            }
+          : p
+      )
     );
-    setPlayers(nextPlayers);
     setPendingModal(null);
     addLog(`${currentPlayer.name} dùng Thẻ Thoát Đảo miễn phí.`, 'good');
     executeDiceRoll(false);
@@ -1487,14 +1765,15 @@ export default function App() {
     const sellValue = calculateSellValue(tile, prop);
 
     sfx.cashIn();
-    const nextPlayers = players.map((p) =>
-      p.id === currentPlayer.id ? { ...p, cash: p.cash + sellValue } : p
+    commitPlayers(
+      players.map((p) =>
+        p.id === currentPlayer.id ? { ...p, cash: p.cash + sellValue } : p
+      )
     );
     const nextOwnership = { ...ownership };
     delete nextOwnership[tileId];
-
-    setPlayers(nextPlayers);
-    setOwnership(nextOwnership);
+    commitOwnership(nextOwnership);
+    emitMoneyTransfer('BANK', currentPlayer.id, sellValue, `Bán ${tile.name}`);
     addLog(
       `${currentPlayer.name} bán ${tile.name} thu về ${formatMoney(sellValue)}.`,
       'warn'
@@ -1503,21 +1782,34 @@ export default function App() {
 
   const handleSettleDebt = () => {
     if (pendingModal?.type !== 'LIQUIDATE' || !currentPlayer) return;
-    const { amountOwed, creditorId } = pendingModal;
+    const { amountOwed, creditorId, reason } = pendingModal;
     if (currentPlayer.cash < amountOwed) return;
 
     sfx.pay();
-    const nextPlayers = players.map((p) => {
-      if (p.id === currentPlayer.id) return { ...p, cash: p.cash - amountOwed };
-      if (creditorId !== null && p.id === creditorId) {
-        return { ...p, cash: p.cash + amountOwed };
-      }
-      return p;
-    });
-
-    setPlayers(nextPlayers);
+    const nextPlayers = commitPlayers(
+      players.map((p) => {
+        if (p.id === currentPlayer.id) return { ...p, cash: p.cash - amountOwed };
+        if (creditorId !== null && p.id === creditorId) {
+          return { ...p, cash: p.cash + amountOwed };
+        }
+        return p;
+      })
+    );
     setPendingModal(null);
-    advanceTurn(nextPlayers);
+    emitMoneyTransfer(
+      currentPlayer.id,
+      creditorId ?? 'BANK',
+      amountOwed,
+      reason
+    );
+
+    const afterPaid = pendingAfterPaidRef.current;
+    pendingAfterPaidRef.current = null;
+    if (afterPaid) {
+      afterPaid(nextPlayers, ownershipRef.current);
+    } else {
+      advanceTurn(nextPlayers);
+    }
   };
 
   const handleDeclareBankruptcy = () => {
@@ -1741,6 +2033,7 @@ export default function App() {
                   p.id === activePlayer?.id && onlineRoom.status === 'PLAYING'
                 }
                 ownership={game.ownership}
+                cashDelta={onlineCashDeltas[p.id]}
               />
             ))}
           </div>
@@ -1757,6 +2050,13 @@ export default function App() {
                 movingPlayerId={onlineMovingPlayerId}
                 canControlTurn={isMyTurn}
                 logs={game.logs}
+                moneyTransfers={onlineTransfers}
+                chanceNotice={
+                  myPendingModal?.type === 'CHANCE_CARD'
+                    ? null
+                    : onlineChanceNotice
+                }
+                onDismissChanceNotice={() => setOnlineChanceNotice(null)}
                 onRollDice={() => {
                   sfx.diceRoll();
                   dispatchOnlineAction({ kind: 'ROLL_DICE' });
@@ -1775,6 +2075,7 @@ export default function App() {
                   p.id === activePlayer?.id && onlineRoom.status === 'PLAYING'
                 }
                 ownership={game.ownership}
+                cashDelta={onlineCashDeltas[p.id]}
               />
             ))}
           </div>
@@ -1788,6 +2089,7 @@ export default function App() {
                   p.id === activePlayer?.id && onlineRoom.status === 'PLAYING'
                 }
                 ownership={game.ownership}
+                cashDelta={onlineCashDeltas[p.id]}
               />
             ))}
           </div>
@@ -2047,6 +2349,7 @@ export default function App() {
               player={p}
               isActive={p.id === currentPlayer?.id && phase === 'PLAYING'}
               ownership={ownership}
+              cashDelta={cashDeltas[p.id]}
             />
           ))}
         </div>
@@ -2063,6 +2366,11 @@ export default function App() {
               isRolling={isRolling}
               movingPlayerId={movingPlayerId}
               logs={logs}
+              moneyTransfers={moneyTransfers}
+              chanceNotice={
+                pendingModal?.type === 'CHANCE_CARD' ? null : chanceNotice
+              }
+              onDismissChanceNotice={() => setChanceNotice(null)}
               onRollDice={handleHumanRollClick}
               onTileClick={handleTileClick}
             />
@@ -2077,6 +2385,7 @@ export default function App() {
               player={p}
               isActive={p.id === currentPlayer?.id && phase === 'PLAYING'}
               ownership={ownership}
+              cashDelta={cashDeltas[p.id]}
             />
           ))}
         </div>
@@ -2089,6 +2398,7 @@ export default function App() {
               player={p}
               isActive={p.id === currentPlayer?.id && phase === 'PLAYING'}
               ownership={ownership}
+              cashDelta={cashDeltas[p.id]}
             />
           ))}
         </div>

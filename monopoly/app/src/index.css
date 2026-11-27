@@ -75,6 +75,30 @@
   50% { transform: translateY(-7px); }
 }
 
+@keyframes money-coin-travel {
+  0% { transform: translateX(-14px) scale(0.75); opacity: 0; }
+  25% { opacity: 1; transform: translateX(-4px) scale(1); }
+  75% { opacity: 1; transform: translateX(6px) scale(1.05); }
+  100% { transform: translateX(16px) scale(0.75); opacity: 0; }
+}
+
+@keyframes cash-float-up {
+  0% { transform: translateY(6px) scale(0.85); opacity: 0; }
+  18% { transform: translateY(0px) scale(1.06); opacity: 1; }
+  75% { transform: translateY(-6px) scale(1); opacity: 1; }
+  100% { transform: translateY(-14px) scale(0.95); opacity: 0; }
+}
+
+@keyframes notice-pop {
+  0% { transform: translateY(-8px) scale(0.95); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes festival-glow {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.85), 0 0 12px rgba(167, 139, 250, 0.45); }
+  50% { box-shadow: 0 0 0 2px rgba(251, 191, 36, 1), 0 0 20px rgba(251, 191, 36, 0.75); }
+}
+
 .animate-dice-shake {
   animation: dice-shake 0.28s ease-in-out infinite;
 }
@@ -87,10 +111,30 @@
   animation: token-hop-flat 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.animate-money-coin-travel {
+  animation: money-coin-travel 1.05s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+.animate-cash-float-up {
+  animation: cash-float-up 2.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-notice-pop {
+  animation: notice-pop 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-festival-glow {
+  animation: festival-glow 2s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-dice-shake,
   .animate-token-hop,
-  .animate-token-hop-flat {
+  .animate-token-hop-flat,
+  .animate-money-coin-travel,
+  .animate-cash-float-up,
+  .animate-notice-pop,
+  .animate-festival-glow {
     animation: none !important;
   }
 }

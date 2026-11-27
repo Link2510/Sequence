@@ -1,7 +1,7 @@
 /* Auto-generated browser port of server.ts room logic (Firebase Hosting). Do not edit by hand. */
 import { BOARD_TILES, CHANCE_CARDS, JAIL_BAIL, START_SALARY } from '../data/boardData.ts';
 import { CHARACTERS, getCharacterById } from '../data/characters.ts';
-import { ChanceCard, LogEntry, PendingModal, Player, PlayerColorKey, PropertyState, TurnStep, VictorySummary } from '../types/game.ts';
+import { ChanceCard, ChanceNoticeEvent, LogEntry, MoneyTransferEvent, PendingModal, Player, PlayerColorKey, PropertyState, TurnStep, VictorySummary } from '../types/game.ts';
 import { ClientWsMessage, GameActionPayload, RoomGameState, RoomPublicView, RoomSlotView, ServerWsMessage, SlotKind } from '../types/room.ts';
 import { calculateBuyoutPrice, calculateMaxLiquidationCash, calculateRent, calculateSellValue, checkVictoryConditions, chooseAIFestivalTile, chooseAILevelToBuy, chooseAIWorldTourTile, formatMoney, getPlayerOwnedTiles, getTileById, shouldAIBuyout } from './gameLogic.ts';
 
@@ -36,6 +36,8 @@ interface InternalRoom {
   playerMeta: Record<number, InternalPlayerMeta>;
   extraTurn: boolean;
   moveSeq: number;
+  transferSeq: number;
+  chanceSeq: number;
   aiTimer: ReturnType<typeof setTimeout> | null;
   updatedAt: number;
 }
@@ -105,6 +107,41 @@ function pushLog(
     { id: `${Date.now()}-${Math.random()}`, text, tone },
     ...room.game.logs.slice(0, 29),
   ];
+}
+
+function pushTransfer(
+  room: InternalRoom,
+  fromId: number | 'BANK',
+  toId: number | 'BANK',
+  amount: number,
+  reason: string
+) {
+  if (!room.game || amount <= 0) return;
+  room.transferSeq += 1;
+  const ev: MoneyTransferEvent = {
+    id: `tr-${room.transferSeq}-${Date.now()}`,
+    seq: room.transferSeq,
+    fromId,
+    toId,
+    amount,
+    reason,
+  };
+  room.game.recentTransfers = [...room.game.recentTransfers.slice(-3), ev];
+}
+
+function pushChanceEvent(
+  room: InternalRoom,
+  playerId: number,
+  card: ChanceCard
+) {
+  if (!room.game) return;
+  room.chanceSeq += 1;
+  room.game.lastChanceEvent = {
+    id: `ch-${room.chanceSeq}-${Date.now()}`,
+    seq: room.chanceSeq,
+    playerId,
+    card,
+  };
 }
 
 function clearAiTimer(room: InternalRoom) {
@@ -251,6 +288,7 @@ function moveRoomPlayerSteps(
   });
 
   if (passedStart) {
+    pushTransfer(room, 'BANK', playerId, START_SALARY, 'Lương qua ô Bắt Đầu');
     pushLog(
       room,
       `${player.name} đi qua ô BẮT ĐẦU, nhận +${formatMoney(START_SALARY)}.`,
@@ -281,6 +319,7 @@ function chargeRoomPlayer(
       }
       return p;
     });
+    pushTransfer(room, playerId, creditorId ?? 'BANK', amount, reason);
     if (afterPaid) {
       afterPaid();
     } else {
@@ -304,6 +343,7 @@ function chargeRoomPlayer(
       const sellVal = calculateSellValue(tile, prop);
       workingCash += sellVal;
       delete workingOwnership[tile.id];
+      pushTransfer(room, 'BANK', playerId, sellVal, `Bán ${tile.name}`);
       pushLog(
         room,
         `${payer.name} bán ${tile.name} thu về ${formatMoney(sellVal)} để trả nợ.`,
@@ -320,6 +360,7 @@ function chargeRoomPlayer(
         }
         return p;
       });
+      pushTransfer(room, playerId, creditorId ?? 'BANK', amount, reason);
       if (afterPaid) {
         afterPaid();
       } else {
@@ -371,6 +412,7 @@ function applyRoomChanceCard(
       room.game.players = room.game.players.map((p) =>
         p.id === playerId ? { ...p, cash: p.cash + gain } : p
       );
+      pushTransfer(room, 'BANK', playerId, gain, `Cơ Hội: ${card.title}`);
       pushLog(
         room,
         `${actor.name} nhận +${formatMoney(gain)} (${card.title}).`,
@@ -576,6 +618,7 @@ function resolveRoomTileLanding(
 
   if (tile.type === 'CHANCE') {
     const card = CHANCE_CARDS[Math.floor(Math.random() * CHANCE_CARDS.length)];
+    pushChanceEvent(room, playerId, card);
     if (actor.isAI) {
       pushLog(room, `${actor.name} rút Thẻ Cơ Hội: ${card.title}.`, 'neutral');
       applyRoomChanceCard(room, playerId, card);
@@ -611,6 +654,7 @@ function resolveRoomTileLanding(
         room.game.players = room.game.players.map((p) =>
           p.id === playerId ? { ...p, cash: p.cash - cost } : p
         );
+        pushTransfer(room, playerId, 'BANK', cost, `Mua ${tile.name}`);
         room.game.ownership = {
           ...room.game.ownership,
           [tile.id]: {
@@ -653,6 +697,7 @@ function resolveRoomTileLanding(
         room.game.players = room.game.players.map((p) =>
           p.id === playerId ? { ...p, cash: p.cash - cost } : p
         );
+        pushTransfer(room, playerId, 'BANK', cost, `Nâng cấp ${tile.name}`);
         room.game.ownership = {
           ...room.game.ownership,
           [tile.id]: { ...prop, level: nextLvl },
@@ -722,6 +767,13 @@ function resolveRoomTileLanding(
               return { ...p, cash: p.cash + buyoutPrice };
             return p;
           });
+          pushTransfer(
+            room,
+            playerId,
+            prop.ownerId,
+            buyoutPrice,
+            `Thâu tóm ${tile.name}`
+          );
           room.game.ownership = {
             ...room.game.ownership,
             [tile.id]: { ...prop, ownerId: playerId },
@@ -914,6 +966,7 @@ function scheduleAITurnIfNeeded(room: InternalRoom) {
             ? { ...p, inJail: false, jailTurns: 0, cash: p.cash - JAIL_BAIL }
             : p
         );
+        pushTransfer(room, current.id, 'BANK', JAIL_BAIL, 'Phí rời Đảo Hoang');
         pushLog(
           room,
           `${current.name} trả ${formatMoney(JAIL_BAIL)} rời Đảo Hoang.`,
@@ -967,6 +1020,8 @@ function startRoomMatch(room: InternalRoom) {
   room.playerMeta = playerMeta;
   room.extraTurn = false;
   room.moveSeq = 0;
+  room.transferSeq = 0;
+  room.chanceSeq = 0;
   room.status = 'PLAYING';
   room.game = {
     players,
@@ -986,6 +1041,8 @@ function startRoomMatch(room: InternalRoom) {
       },
     ],
     victory: null,
+    recentTransfers: [],
+    lastChanceEvent: null,
   };
 
   broadcastRoom(room);
@@ -1039,6 +1096,7 @@ function handleGameAction(
       room.game.players = room.game.players.map((p) =>
         p.id === current.id ? { ...p, cash: p.cash - cost } : p
       );
+      pushTransfer(room, current.id, 'BANK', cost, `Mua ${tile.name}`);
       room.game.ownership = {
         ...room.game.ownership,
         [tileId]: {
@@ -1081,6 +1139,7 @@ function handleGameAction(
       room.game.players = room.game.players.map((p) =>
         p.id === current.id ? { ...p, cash: p.cash - cost } : p
       );
+      pushTransfer(room, current.id, 'BANK', cost, `Nâng cấp ${tile.name}`);
       room.game.ownership = {
         ...room.game.ownership,
         [tileId]: { ...prop, level: action.targetLevel },
@@ -1113,6 +1172,13 @@ function handleGameAction(
         if (p.id === prop.ownerId) return { ...p, cash: p.cash + buyoutPrice };
         return p;
       });
+      pushTransfer(
+        room,
+        current.id,
+        prop.ownerId,
+        buyoutPrice,
+        `Thâu tóm ${tile.name}`
+      );
       room.game.ownership = {
         ...room.game.ownership,
         [tileId]: { ...prop, ownerId: current.id },
@@ -1158,6 +1224,7 @@ function handleGameAction(
           ? { ...p, inJail: false, jailTurns: 0, cash: p.cash - JAIL_BAIL }
           : p
       );
+      pushTransfer(room, current.id, 'BANK', JAIL_BAIL, 'Phí rời Đảo Hoang');
       room.game.pendingModal = null;
       pushLog(
         room,
@@ -1264,6 +1331,7 @@ function handleGameAction(
       room.game.players = room.game.players.map((p) =>
         p.id === current.id ? { ...p, cash: p.cash + sellValue } : p
       );
+      pushTransfer(room, 'BANK', current.id, sellValue, `Bán ${tile.name}`);
       const nextOwn = { ...room.game.ownership };
       delete nextOwn[action.tileId];
       room.game.ownership = nextOwn;
@@ -1283,7 +1351,7 @@ function handleGameAction(
       ) {
         return;
       }
-      const { amountOwed, creditorId } = room.game.pendingModal.modal;
+      const { amountOwed, creditorId, reason } = room.game.pendingModal.modal;
       if (current.cash < amountOwed) return;
       room.game.players = room.game.players.map((p) => {
         if (p.id === current.id) return { ...p, cash: p.cash - amountOwed };
@@ -1292,6 +1360,7 @@ function handleGameAction(
         }
         return p;
       });
+      pushTransfer(room, current.id, creditorId ?? 'BANK', amountOwed, reason);
       advanceRoomTurn(room);
       break;
     }
@@ -1410,6 +1479,8 @@ export function handleBrowserMessage(clientId: string, raw: string) {
           playerMeta: {},
           extraTurn: false,
           moveSeq: 0,
+          transferSeq: 0,
+          chanceSeq: 0,
           aiTimer: null,
           updatedAt: Date.now(),
         };

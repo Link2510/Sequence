@@ -4,11 +4,14 @@ import { BOARD_TILES } from '../data/boardData';
 import { PLAYER_COLORS } from '../data/characters';
 import {
   BoardTile as BoardTileType,
+  ChanceNoticeEvent,
   LogEntry,
+  MoneyTransferEvent,
   Player,
   PropertyState,
   TurnStep,
 } from '../types/game';
+import { ChanceNoticeBanner, MoneyTransferOverlay } from './BoardOverlays';
 import { BoardTile } from './BoardTile';
 import { VietnamMapBackdrop } from './VietnamMapBackdrop';
 
@@ -22,6 +25,9 @@ interface GameBoardProps {
   movingPlayerId: number | null;
   canControlTurn?: boolean;
   logs: LogEntry[];
+  moneyTransfers?: MoneyTransferEvent[];
+  chanceNotice?: ChanceNoticeEvent | null;
+  onDismissChanceNotice?: () => void;
   onRollDice: () => void;
   onTileClick: (tile: BoardTileType) => void;
 }
@@ -73,6 +79,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   movingPlayerId,
   canControlTurn,
   logs,
+  moneyTransfers = [],
+  chanceNotice,
+  onDismissChanceNotice,
   onRollDice,
   onTileClick,
 }) => {
@@ -80,6 +89,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const isDoubles = dice[0] === dice[1];
   const hasControl = canControlTurn ?? !currentPlayer.isAI;
   const canRoll = turnStep === 'WAIT_ROLL' && hasControl;
+
+  const activeFestivals = BOARD_TILES.filter(
+    (t) => ownership[t.id]?.hasFestival
+  ).map((t) => {
+    const prop = ownership[t.id]!;
+    const owner = players.find((p) => p.id === prop.ownerId);
+    return { tile: t, owner };
+  });
 
   return (
     <div className="w-full max-w-[780px] aspect-square mx-auto rounded-2xl p-2 sm:p-3 bg-[#0C312B] border border-emerald-400/20 shadow-2xl">
@@ -114,6 +131,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         {/* Central 7x7 Arena */}
         <div className="col-start-2 col-end-9 row-start-2 row-end-9 rounded-xl bg-[radial-gradient(circle_at_center,_#12453C_0%,_#0B2C26_70%,_#08211D_100%)] border border-emerald-400/15 p-3 sm:p-5 flex flex-col justify-between relative overflow-hidden">
           <VietnamMapBackdrop />
+          <MoneyTransferOverlay transfers={moneyTransfers} players={players} />
+          <ChanceNoticeBanner
+            notice={chanceNotice}
+            players={players}
+            onDismiss={onDismissChanceNotice}
+          />
 
           {/* Top Center: Active Player Banner */}
           <div className="relative z-10 flex items-center justify-between gap-3 bg-[#071D19]/75 backdrop-blur-sm border border-white/15 rounded-xl px-3 py-2">
@@ -159,6 +182,38 @@ export const GameBoard: React.FC<GameBoardProps> = ({
               </span>
             )}
           </div>
+
+          {/* Active Festival Strip (visible to all players whenever any city hosts a festival) */}
+          {activeFestivals.length > 0 && (
+            <div className="relative z-10 mt-1.5 flex flex-wrap items-center gap-1.5 bg-gradient-to-r from-violet-950/85 to-amber-950/80 backdrop-blur-sm border border-amber-400/45 rounded-lg px-2.5 py-1.5 shadow-md">
+              <span className="flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-amber-300 whitespace-nowrap shrink-0">
+                <PartyPopper className="w-3.5 h-3.5 text-amber-300" />
+                Lễ Hội x2:
+              </span>
+              {activeFestivals.map(({ tile, owner }) => {
+                const ownerColor = owner ? PLAYER_COLORS[owner.color] : null;
+                return (
+                  <span
+                    key={tile.id}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/35 border border-white/15 text-[10px] sm:text-[11px] font-semibold text-white"
+                  >
+                    {ownerColor && (
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: ownerColor.hex }}
+                      />
+                    )}
+                    <span>{tile.name}</span>
+                    {owner && (
+                      <span className="text-amber-200/85 font-normal">
+                        ({owner.name})
+                      </span>
+                    )}
+                  </span>
+                );
+              })}
+            </div>
+          )}
 
           {/* Center Stage: Mode Prompt OR Dice & Roll Action */}
           <div className="relative z-10 flex-1 flex flex-col items-center justify-center my-2 bg-[#061A16]/45 backdrop-blur-[2px] rounded-xl px-3 py-2">

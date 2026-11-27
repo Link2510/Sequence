@@ -1,6 +1,8 @@
 import {
   BoardTile,
+  ChanceNoticeEvent,
   LogEntry,
+  MoneyTransferEvent,
   PendingModal,
   Player,
   PlayerColorKey,
@@ -44,6 +46,8 @@ export interface RoomGameState {
   } | null;
   logs: LogEntry[];
   victory: VictorySummary | null;
+  recentTransfers: MoneyTransferEvent[];
+  lastChanceEvent: ChanceNoticeEvent | null;
 }
 
 export interface RoomPublicView {
