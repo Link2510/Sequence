@@ -9,7 +9,7 @@ Thư mục: `G:\AI-Models\monopoly-vn`. Mở `index.html` là chơi.
 - **Tự kết thúc lượt ngay** (không hàng đợi) khi không còn việc phải làm: hết tiền mua đất thì hiện lý do ~1,8s rồi đi tiếp; bỏ qua đấu giá xong thì sang lượt kế ngay; có đất để xây thì mới chờ bạn chọn. Có đôi thì vẫn được đi thêm lượt.
 - Giao diện **chuẩn 1920×1080, co giãn theo px hiển thị** (`clamp()/min()/vw/vh`); **một màn hình, không cần cuộn**. Thanh trên có số lượt/chế độ; **4 tên người chơi cố định ở 4 góc khung bàn**, bàn nằm giữa (`min(860px, 100vh-210px, 100vw-420px)`) nên tên không đè lên bàn ở mọi kích thước. Xúc xắc + nút hành động nằm giữa bàn: **đã bỏ nút “Tung xúc xắc”**, đến lượt ai thì hiện dòng “Nhấn vào xúc xắc để tung xúc xắc” và bấm vào xúc xắc để đi. Nút **Sáng/Tối** đổi theme được ở cả 2 chế độ (tour mặc định sáng, bật sang tối khi nhấn). Đã **bỏ hẳn bảng điều khiển bên phải** (thẻ lượt/tab Nhật ký) — thông tin ô hiện bằng thẻ hover khi giữ chuột ~0,3s. Có thông báo ngắn (toast) sau mỗi hành động.
 - Bàn 40 ô với tên đường Việt Nam, 22 đất + 4 ga + 2 tiện ích, 16 Thử Thách + 16 Khối Cộng Đồng.
-- Luật cổ điển: xúc xắc, đi bài, qua GO nhận 200đ, 3 lần đôi liên tiếp vào tù, thuế, mua/đấu giá đất, thuê theo nhà/khách sạn, ga/tiện ích, thế chấp/chuộc, xây nhà theo nhóm màu, phá sản chuyển tài sản.
+- Luật cổ điển: xúc xắc, đi bài, qua GO nhận 200đ, 3 lần đôi liên tiếp vào tù, thuế, mua/đấu giá đất, thuê theo nhà/khách sạn, ga/tiện ích, thế chấp/chuộc, xây nhà theo nhóm màu, phá sản chuyển tài sản. **Trong tù**: tung không ra đôi thì qua lượt cho người sau; hết 3 lượt không ra đôi thì bắt buộc trả 50đ để ra.
 - Chấm thắng: người cuối còn lại, hoặc **hết 400 lượt thì tính tổng tài sản** (giới hạn cần thiết để game web có điểm kết thúc — bản Steam không có, mình ghi rõ trong hướng dẫn).
 - Chế độ chơi:
   - **Với AI (local)**: 1 bạn + 2 AI, 1 bạn + 3 AI, 2 bạn + 1 AI, 2 bạn + 2 AI.
@@ -40,7 +40,7 @@ Thư mục: `G:\AI-Models\monopoly-vn`. Mở `index.html` là chơi.
 | Giá tăng dần | Giá/tiền thuê tăng theo chiều kim đồng hồ |
 | Liên hoan | Đầu trận ngẫu nhiên 2 thành phố có 🎊 — thuê gấp đôi cả trận |
 | Thử Thách | ~50% đầu lượt, cho power-up: thêm lượt, động đất phá nhà đối thủ, thẻ thoát tù, tiền, tour thế giới, vào đảo… |
-| Đảo Mất Tích | 1 ô tù duy nhất, giam đúng 3 lượt (đôi / trả phí / thẻ thoát tù để ra sớm) |
+| Đảo Mất Tích | 1 ô tù duy nhất: không ra đôi thì **qua lượt**; hết 3 lượt không ra thì **bắt buộc trả 200đ** (hoặc dùng thẻ thoát tù / trả sớm để ra trước) |
 | Vô Địch Thế Giới | 🏆 Chọn 1 thành phố của bạn, mỗi lần tổ chức thuê ×1 thêm |
 | Tour Thế Giới | 🌍 Trả 50đ để đi tới 1 đất trống hoặc đất của bạn ở lượt sau |
 | Cơ quan thuế | Trả 10% tổng tài sản |
@@ -50,7 +50,7 @@ Chế độ được gửi trong `meta.mode` của phòng nên chủ và khách 
 
 ## Kiểm chứng
 
-`node tools/selftest.js` → kiểm tra 40 ô tour cùng vị trí bàn gốc, 8 nhóm màu (2 hoặc 3 đất), 4 resort, 6 ô Thử Thách, 1 Đảo Mất Tích, lên nhà theo vòng, tour thế giới, và 200 trận AI-vs-AI đều kết thúc hợp lệ.
+`node tools/selftest.js` → kiểm tra 40 ô tour cùng vị trí bàn gốc, 8 nhóm màu (2 hoặc 3 đất), 4 resort, 6 ô Thử Thách, 1 Đảo Mất Tích, lên nhà theo vòng, tour thế giới, **qua lượt khi không ra đôi và bắt buộc trả tiền sau 3 lượt ở tù (cả 2 chế độ)**, và 200 trận AI-vs-AI đều kết thúc hợp lệ.
 
 Đã test thật trên 2 tab + Firebase: tạo phòng `M9SGNH` → tab kia thấy “Phòng đang mở” → vào → host tung xúc xắc, khách thấy ngay → host kết thúc lượt, AI đi, đến lượt khách (Sam) → khách tung xúc xắc, host thấy “Sam …” trong nhật ký. **0 lỗi console**. Phòng test đã xoá.
 

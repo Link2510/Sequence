@@ -426,10 +426,12 @@
         (args ? ' data-args="' + args + '"' : '') + '>' + label + '</button>';
     }
     if (s.phase === 'roll') {
-      html += '<div class="roll-hint">Nhấn vào xúc xắc để tung xúc xắc</div>';
+      html += '<div class="roll-hint">' + (p.jailTurns > 0
+        ? 'Đang bị giam (' + p.jailTurns + '/3) — nhấn vào xúc xắc, ra đôi thì được ra; không ra đôi sẽ qua lượt'
+        : 'Nhấn vào xúc xắc để tung xúc xắc') + '</div>';
       if (p.jailTurns > 0) {
         if (p.freeJail > 0) html += btn('Dùng thẻ ra tù', 'freeJail');
-        html += btn('Trả 50đ ra tù', 'leaveJail');
+        html += btn('Trả ' + (S.mode === 'tour' ? 200 : 50) + 'đ ra tù', 'leaveJail');
       }
       if (S.mode === 'tour' && p.worldTour) html += '<button type="button" class="btn" id="wtBtn">🌍 Tour Thế Giới</button>';
     } else if (s.phase === 'championship') {

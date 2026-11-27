@@ -5,6 +5,7 @@
   var TILES = B.TILES, START_CASH = 1500, GO_BONUS = 200, JAIL_POS = 10, JAIL_FEE = 50;
   function tiles(s) { return B.tiles(s); }
   function jailPos(s) { return 10; } /* Đảo Mất Tích nằm đúng ô Tù cũ */
+  function jailFee(s) { return s.mode === 'tour' ? 200 : JAIL_FEE; }
 
   function makeRng(seed) {
     var s = (seed >>> 0) || 0x9e3779b9;
@@ -190,7 +191,7 @@
       if (cost) pay(s, p, null, cost, 'sửa chữa');
     }
     if (e.kind === 'jail') {
-      p.pos = jailPos(s); p.jailTurns = s.mode === 'tour' ? 3 : 1;
+      p.pos = jailPos(s); p.jailTurns = 1;
       emit(s, { from: p.name, to: 'Tất cả', amount: 0, reason: 'ĐẢO MẤT TÍCH · ' + p.name + ' bị giam 3 lượt', kind: 'jail' });
       log(s, p.name + ' vào Đảo Mất Tích');
     }
@@ -290,7 +291,7 @@
       }
       applyCard(s, p, deck.shift());
     } else if (t.type === 'jail') {
-      p.jailTurns = s.mode === 'tour' ? 3 : Math.max(1, p.jailTurns);
+      p.jailTurns = Math.max(1, p.jailTurns);
       emit(s, { from: p.name, to: 'Tất cả', amount: 0, reason: (s.mode === 'tour' ? 'ĐẢO MẤT TÍCH · ' : 'VÀO TÙ · ') + p.name + ' bị giam', kind: 'jail' });
       log(s, p.name + (s.mode === 'tour' ? ' bị giam ở Đảo Mất Tích 3 lượt' : ' bị giam trong tù'));
     } else if (t.type === 'tax') {
@@ -340,18 +341,22 @@
         log(s, p.name + ' tung đôi, ra tù');
         emit(s, { from: p.name, to: 'Tất cả', amount: 0, reason: 'ĐÔI XÚC XẮC · ' + p.name + ' ra tù và đi tiếp', kind: 'event' });
         p.jailTurns = 0;
-      } else if (s.mode === 'tour') {
-        /* Đảo Mất Tích: ở lại đúng 3 lượt, hoặc trả phí/thẻ thoát tù. */
-        p.jailTurns--;
-        if (p.jailTurns > 0) return { ok: true, jailed: true };
-        p.jailTurns = 0;
-        log(s, p.name + ' hết 3 lượt trên đảo, được ra');
       } else {
+        /* Không ra đôi → ở thêm một lượt và QUA LƯỢT cho người sau. */
         p.jailTurns++;
-        if (p.jailTurns >= 3) {
-          if (pay(s, p, null, JAIL_FEE, 'phạt tù')) { p.jailTurns = 0; log(s, p.name + ' trả phạt và ra tù'); }
-          else return { ok: true, jailed: true };
-        } else return { ok: true, jailed: true };
+        if (p.jailTurns <= 3) {
+          log(s, p.name + ' không ra đôi — ở lại ' + (s.mode === 'tour' ? 'Đảo Mất Tích' : 'tù') + ' (' + p.jailTurns + '/3)');
+          emit(s, { from: p.name, to: 'Tất cả', amount: 0, reason: 'Vẫn bị giam · lượt ' + p.jailTurns + '/3', kind: 'jail' });
+          s.doubles = 0; s.extraTurn = false;
+          endTurn(s);
+          return { ok: true, jailed: true, passed: true };
+        }
+        /* Hết 3 lượt không ra đôi → bắt buộc trả tiền để ra tù. */
+        var fee = jailFee(s);
+        if (!pay(s, p, null, fee, 'phạt ra tù')) return { ok: true, jailed: true };
+        p.jailTurns = 0;
+        log(s, p.name + ' hết 3 lượt, trả ' + fee + 'đ để ra tù');
+        emit(s, { from: p.name, to: 'Tất cả', amount: 0, reason: 'TRẢ ' + fee + 'Đ · ' + p.name + ' ra tù', kind: 'event' });
       }
     }
     if (d1 === d2) {
@@ -361,9 +366,10 @@
       }
       if (s.doubles >= 3) {
         p.pos = jailPos(s); p.jailTurns = 1; s.doubles = 0;
-        emit(s, { from: p.name, to: 'Tất cả', amount: 0, reason: 'VÀO TÙ · 3 lần đôi liên tiếp', kind: 'jail' });
+        emit(s, { from: p.name, to: 'Tất cả', amount: 0, reason: (s.mode === 'tour' ? 'ĐẢO MẤT TÍCH' : 'VÀO TÙ') + ' · 3 lần đôi liên tiếp', kind: 'jail' });
         log(s, 'Ba lần liên tiếp đôi — ' + p.name + ' vào tù');
-        return { ok: true, jailed: true };
+        endTurn(s);
+        return { ok: true, jailed: true, passed: true };
       }
     } else s.doubles = 0;
     move(s, p, sum);
@@ -377,7 +383,7 @@
     var p = s.players[s.current];
     if (p.jailTurns <= 0) return { ok: false };
     if (p.freeJail > 0) { p.freeJail--; p.jailTurns = 0; log(s, p.name + ' dùng thẻ miễn phí ra tù'); return { ok: true }; }
-    if (!pay(s, p, null, JAIL_FEE, 'phạt tù')) return { ok: true };
+    if (!pay(s, p, null, jailFee(s), 'phạt tù')) return { ok: true };
     p.jailTurns = 0; return { ok: true };
   }
   function useFreeJail(s) {
@@ -635,6 +641,7 @@
     var p = s.players[s.current];
     var r = roll(s);
     if (!r.ok) return r;
+    if (r.passed) return r; /* đã qua lượt trong lúc ở tù */
     if (s.phase === 'auction') {
       active(s).forEach(function (q) {
         var bid = aiBid(s, q, s.auction.tile);

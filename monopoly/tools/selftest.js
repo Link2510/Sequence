@@ -75,6 +75,29 @@ console.log('=== tour board ===');
   ok(E.useWorldTour(s, 3).ok && !p.worldTour, 'world tour moves and clears card');
 }
 
+console.log('=== jail turn passing ===');
+{
+  function nonDouble() { var i = 0; return function () { i++; return i % 2 ? 0.01 : 0.3; }; }
+  ['classic', 'tour'].forEach(function (mode) {
+    const s = E.createGame({ mode: mode, seed: 9, players: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }] });
+    const p = s.players[0];
+    p.jailTurns = 1; s.current = 0; s.phase = 'roll'; s.rng = nonDouble();
+    const r = E.roll(s);
+    ok(r.ok && r.passed && s.current === 1 && s.turns === 1 && p.jailTurns === 2,
+      mode + ': not doubles passes the turn');
+    s.current = 0; s.phase = 'roll'; p.jailTurns = 3; p.cash = 1000; s.rng = nonDouble();
+    const r2 = E.roll(s);
+    ok(!r2.passed && p.jailTurns === 0 &&
+      s.log.some(function (x) { return x.indexOf('trả ' + (mode === 'tour' ? 200 : 50) + 'đ để ra tù') >= 0; }),
+      mode + ': after 3 rolls must pay ' + (mode === 'tour' ? 200 : 50));
+  });
+  const s = E.createGame({ mode: 'classic', seed: 9, players: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }] });
+  const p = s.players[0];
+  p.jailTurns = 1; s.current = 0; s.phase = 'roll'; s.rng = function () { return 0.01; };
+  const r = E.roll(s);
+  ok(!r.passed && p.jailTurns === 0, 'doubles leaves jail and keeps the turn');
+}
+
 console.log('=== simulation (200 games, 4 AI) ===');
 let wins = {};
 for (let n = 0; n < 200; n++) {
