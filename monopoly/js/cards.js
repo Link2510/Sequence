@@ -40,7 +40,31 @@
     { id: 'cc16', text: 'Chi phí đào tạo: trả 20đ.', effect: { kind: 'cash', amount: -20 } }
   ];
 
-  var API = { CHANCE: CHANCE, CHEST: CHEST };
+  /* Power-up / event cards — original effects, inspired by the fast pace of Business Tour. */
+  var EVENTS = [
+    { id: 'ev1', text: 'Thưởng đầu tư: nhận 100đ từ ngân hàng.', effect: { kind: 'cash', amount: 100 } },
+    { id: 'ev2', text: 'Tiến thêm 3 ô (nhận 200đ nếu qua KHỞI ĐẦU).', effect: { kind: 'move', steps: 3 } },
+    { id: 'ev3', text: 'Được tặng 1 nhà miễn phí trên đất bạn sở hữu.', effect: { kind: 'freeHouse' } },
+    { id: 'ev4', text: 'Mỗi đối thủ tặng bạn 20đ.', effect: { kind: 'collectEach', amount: 20 } },
+    { id: 'ev5', text: 'Bạn tặng mỗi đối thủ 15đ.', effect: { kind: 'payEach', amount: 15 } },
+    { id: 'ev6', text: 'Lùi lại 2 ô.', effect: { kind: 'move', steps: -2 } },
+    { id: 'ev7', text: 'Trộm 30đ của đối thủ giàu nhất.', effect: { kind: 'steal', amount: 30 } },
+    { id: 'ev8', text: 'Nhận thêm 1 lượt đi ngay.', effect: { kind: 'extraTurn' } }
+  ];
+
+  /* Business Tour: thẻ Thử Thách cho power-up, có lợi lẫn có hại. */
+  var TOUR_CHANCE = [
+    { id: 'tc1', text: 'Tăng tốc: bạn được đi thêm 1 lượt.', effect: { kind: 'extraTurn' } },
+    { id: 'tc2', text: 'Động đất: phá công trình cấp cao nhất của một đối thủ.', effect: { kind: 'earthquake' } },
+    { id: 'tc3', text: 'Thẻ thoát tù: giữ đến khi cần.', effect: { kind: 'freeJail' } },
+    { id: 'tc4', text: 'Cổ tức: nhận 200đ từ ngân hàng.', effect: { kind: 'cash', amount: 200 } },
+    { id: 'tc5', text: 'Tour thế giới miễn phí: chọn một đất trống hoặc đất của bạn.', effect: { kind: 'worldTour' } },
+    { id: 'tc6', text: 'Trượt chân: vào Đảo Mất Tích 3 lượt.', effect: { kind: 'jail' } },
+    { id: 'tc7', text: 'Phạt giao thông: trả 100đ.', effect: { kind: 'cash', amount: -100 } },
+    { id: 'tc8', text: 'Trợ cấp: nhận 100đ từ ngân hàng.', effect: { kind: 'cash', amount: 100 } }
+  ];
+
+  var API = { CHANCE: CHANCE, CHEST: CHEST, EVENTS: EVENTS, TOUR_CHANCE: TOUR_CHANCE };
   root.LOTRMonopolyCards = API;
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
 })(typeof window !== 'undefined' ? window : globalThis);

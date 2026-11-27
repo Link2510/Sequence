@@ -23,6 +23,7 @@
       </div>
     </div>
     <div class="top-meta">
+      <span class="meta-pill gold" id="modeBadge">Truyền thống</span>
       <span class="meta-pill" id="topRound">Lượt 0/400</span>
       <span class="meta-pill gold" id="topPhase">Sẵn sàng</span>
     </div>
@@ -34,42 +35,20 @@
 
   <main class="layout">
     <section class="board-panel panel">
-      <div class="panel-title"><span class="dot"></span> BÀN CỜ</div>
+      <div class="panel-title"><span class="dot"></span> BÀN CỜ
+        <span class="board-controls" id="boardControls">
+          <button type="button" data-view="flat" class="active">Phẳng</button>
+          <button type="button" id="themeBtn">Sáng</button>
+        </span>
+      </div>
+      <div id="boardHud"></div>
       <div id="board"></div>
+      <div id="tourDecor" aria-hidden="true"><span class="stack st1">💵💵</span><span class="stack st2">💵💵</span><span class="stack st3">💵💵</span><span class="stack st4">💵💵</span></div>
     </section>
-
-    <aside class="dashboard">
-      <section class="turn-panel panel">
-        <div id="turnCard"></div>
-        <div id="phaseLabel" class="phase-label">Đang chờ</div>
-      </section>
-
-      <section class="dice-panel panel">
-        <div class="panel-title"><span class="dot"></span> XÚC XẮC <span id="turnLabel" class="muted-right"></span></div>
-        <div id="diceBox">
-          <div class="die" id="die1">–</div>
-          <div class="die" id="die2">–</div>
-          <div id="diceSum" class="dice-sum"></div>
-        </div>
-        <div id="actionBox" class="action-box"></div>
-      </section>
-
-      <section class="info-panel panel">
-        <div class="tabs" id="tabs">
-          <button class="tab active" data-tab="detail" type="button">Thông tin ô</button>
-          <button class="tab" data-tab="players" type="button">Người chơi</button>
-          <button class="tab" data-tab="log" type="button">Nhật ký</button>
-        </div>
-        <div class="tab-panels">
-          <div id="detailBox" class="tab-panel active"></div>
-          <div id="playerList" class="tab-panel"></div>
-          <div id="logList" class="tab-panel"></div>
-        </div>
-      </section>
-    </aside>
   </main>
 </div>
 <div id="overlayRoot"></div>
+<div id="hoverCard"></div>
 <div id="toastRoot"></div>
 <script src="js/board.js"></script>
 <script src="js/cards.js"></script>

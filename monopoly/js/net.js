@@ -44,6 +44,7 @@
     createRoom: function (code, meta) { return ref(code).child('meta').set(meta); },
     joinRoom: function (code) { return ref(code).child('meta').once('value').then(function (s) { return s.val(); }); },
     markGuest: function (code) { return ref(code).child('meta/guestJoined').set(true); },
+    setGuestInfo: function (code, data) { return ref(code).child('meta').update(data); },
     watchMeta: function (code, cb) { ref(code).child('meta').on('value', function (s) { cb(s.val()); }); },
     watchState: function (code, cb) { ref(code).child('state').on('value', function (s) { cb(s.val()); }); },
     publishState: function (code, state) { return ref(code).child('state').set(state); },
@@ -51,6 +52,8 @@
     watchIntents: function (code, cb) {
       ref(code).child('intents').on('child_added', function (s) { cb({ key: s.key, value: s.val() }); });
     },
-    removeIntent: function (code, key) { return ref(code).child('intents').child(key).remove(); }
+    removeIntent: function (code, key) { return ref(code).child('intents').child(key).remove(); },
+    sendChat: function (code, msg) { return ref(code).child('chat').push(msg); },
+    watchChat: function (code, cb) { ref(code).child('chat').on('child_added', function (s) { cb(s.val()); }); }
   };
 })(typeof window !== 'undefined' ? window : globalThis);
