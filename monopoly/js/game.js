@@ -684,7 +684,14 @@
     S.suppressReveal = true;
     renderAll();
     if (prev && S.s.dice && (!prev.dice || prev.dice.join() !== S.s.dice.join())) {
-      animateDice(function () {});
+      animateDice(function () {
+        var d = S.s && S.s.dice;
+        if (d) {
+          [$('die1'), $('cdie1')].forEach(function (e) { if (e) e.textContent = d[0]; });
+          [$('die2'), $('cdie2')].forEach(function (e) { if (e) e.textContent = d[1]; });
+          if ($('diceSum')) $('diceSum').textContent = '= ' + (d[0] + d[1]);
+        }
+      });
       S.s.players.forEach(function (p, i) {
         if (prev.pos[i] != null && prev.pos[i] !== p.pos) {
           flyToken(i, prev.pos[i], p.pos, function () { S.suppressReveal = false; renderCardReveal(); });
