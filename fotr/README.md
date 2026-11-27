@@ -95,7 +95,7 @@ Double-click `index.html` (hoặc `Chay.bat`). Không cần server, không cài 
 -intro chương: xem truyện, danh sách nhân vật, loại thắng (ngắn/dài), Threat.
 - Màn hình chọn nhân vật: bạn chọn 1 nhân vật; Frodo tự gán cho người cầm Nhẫn Vàng; AI nhận các nhân vật còn lại.
 - Bảng điều khiển: ô mục tiêu từng nhân vật (✓/✗), token Nhẫn, lá bài bị rơi, lá Threat, nhật ký.
-- Nút **Hướng dẫn từng bước**: 9 bước coach-mark dẫn bạn qua chương 1.
+- Nút **Hướng dẫn từng bước**: 9 bước coach-mark dẫn bạn qua chương 1. **Không tự hiện khi vừa bắt đầu game** — bấm nút này trên thanh trên cùng khi bạn cần; luật đầy đủ ở nút **Luật chơi**.
 - Nút **Luật chơi**: 9 mục luật, gồm cả phần “Phạm vi tái tạo” và “Quyền riêng tư”.
 - Nút **EN/VI** đổi ngôn ngữ mọi lúc.
 - Tiến trình lưu trong `localStorage`; nút **Đặt lại tiến trình** xoá.
@@ -128,7 +128,7 @@ python tools/check-font.py
 
 Kết quả đã chạy thật: **PASS 9086 / FAIL 0** (kiểm tra bộ bài, dữ liệu 18 chương, i18n, và 80 vòng mô phỏng mỗi chương cho cả 3 và 4 người). Font: **103/103** ký tự dấu tiếng Việt.
 
-Đã mở thật trong Chromium: **0 lỗi console**; vào chương 1 → chọn nhân vật → chia bài → tutorial → đi 1 lượt bài (Frodo thắng lượt 1) → sang lượt 2 → đổi ngôn ngữ → mở hướng dẫn đều chạy. Không dùng ảnh chụp màn hình để kiểm tra; dùng log text, DOM state và bảng ký tự font.
+Đã mở thật trong Chromium: **0 lỗi console**; vào chương 1 → chọn nhân vật → chia bài → vào thẳng lượt 1 (không hiện tutorial) → bấm nút “Hướng dẫn từng bước” khi cần → đi 1 lượt bài (Frodo thắng lượt 1) → sang lượt 2 → đổi ngôn ngữ → mở luật chơi đều chạy. Không dùng ảnh chụp màn hình để kiểm tra; dùng log text, DOM state và bảng ký tự font.
 
 Nguồn luật: rulebook chính thức [PDF trên Asmodee CDN](https://cdn.svc.asmodee.net/production-officedog/uploads/2025/10/ODLO01_Rulebook_web.pdf), danh sách thẻ BoardGameGeek, trang Office Dog Games. Để đọc PDF lúc phát triển mình có cài `pypdf` **vào môi trường Python của máy** — game không dùng package này và không gọi mạng.
 

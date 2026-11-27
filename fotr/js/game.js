@@ -610,11 +610,7 @@
   function onTrickComplete(res) {
     log(T('trickWin').replace('{name}', playerName(res.winner)).replace('{n}', res.trick), 'log-gold');
     beep(res.usedRingPower ? 780 : 600, 0.18, 'sine');
-    var finish = function () { finishTrick(); };
-    if (!S.progress.tutorialDone && S.round.trick === 2 && !isOnline()) {
-      S.progress.tutorialDone = true; save();
-      startTutorial(['table', 'progress'], finish);
-    } else setTimeout(finish, 1400);
+    setTimeout(finishTrick, 1400);
   }
 
   function finishTrick() {
@@ -869,13 +865,8 @@
       closeOverlay();
       E.startRound(r);
       renderAll();
-      var go = function () {
-        log((S.lang === 'vi' ? 'Lượt 1 bắt đầu' : 'Trick 1 begins'), 'log-gold');
-        renderAll(); scheduleAI();
-      };
-      if (!S.progress.tutorialDone && S.chapterIndex === 0 && !isOnline()) {
-        startTutorial(['welcome', 'lost', 'goals', 'ring', 'hand', 'follow', 'play'], go);
-      } else go();
+      log((S.lang === 'vi' ? 'Lượt 1 bắt đầu' : 'Trick 1 begins'), 'log-gold');
+      renderAll(); scheduleAI();
     });
   }
 
