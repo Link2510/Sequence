@@ -763,7 +763,19 @@
       Net.createRoom(code, { created: Date.now(), playerCount: count, guestJoined: false, tokenChoice: S.tokenChoice, hostName: S.playerNames[0], mode: S.mode }).then(function () {
         Net.watchIntents(code, function (item) {
           if (!isHost() || !S.s || !item.value || item.value.type !== 'action') return;
-          dispatch(item.value.name, item.value.args);
+          var acted = item.value.name;
+          dispatch(acted, item.value.args);
+          /* Khách đi/xây xong thì host phải kết thúc lượt, nếu không AI đứng yên. */
+          if (['build', 'buildTo', 'mortgage', 'unmortgage', 'sell'].indexOf(acted) >= 0) {
+            dispatch('endTurn');
+          } else if (S.s.phase === 'end' && !S.s.winner) {
+            var cur = S.s.players[S.s.current];
+            var canBuild = cur.properties.some(function (i) {
+              return boardTiles()[i] && boardTiles()[i].type === 'property' &&
+                E.buildOptions(S.s, cur, i).some(function (o) { return o.enabled; });
+            });
+            if (!canBuild) dispatch('endTurn');
+          }
           renderAll(); publishNow();
           if (S.s.winner) showResult();
           try { Net.removeIntent(code, item.key); } catch (e) {}
