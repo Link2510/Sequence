@@ -1,61 +1,30 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MONOPOLY · Phiên bản Việt Nam</title>
-<link rel="stylesheet" href="css/styles.css">
-</head>
-<body><a class="bg-home" href="https://boardgameace.web.app/" title="Về sảnh trò chơi" aria-label="Về sảnh trò chơi">← Sảnh trò chơi</a>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tour Kinh Doanh Việt Nam — Cờ Tỷ Phú Chiến Thuật</title>
+    <meta name="description" content="Trò chơi cờ tỷ phú chiến thuật lấy cảm hứng từ Business Tour với bản đồ các tỉnh thành và danh thắng Việt Nam." />
+    <meta property="og:title" content="Tour Kinh Doanh Việt Nam — Cờ Tỷ Phú Chiến Thuật" />
+    <meta property="og:description" content="Trò chơi cờ tỷ phú chiến thuật lấy cảm hứng từ Business Tour với bản đồ các tỉnh thành và danh thắng Việt Nam." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script type="module" crossorigin src="./assets/index-BwK_TTUM.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BESBFyJ6.css">
+  </head>
+  <body class="bg-[#08221E] text-slate-100 antialiased selection:bg-amber-400 selection:text-slate-950"><a class="bg-home" href="https://boardgameace.web.app/" title="Về sảnh trò chơi" aria-label="Về sảnh trò chơi">← Sảnh trò chơi</a>
 <style>
 .bg-home{position:fixed;left:12px;bottom:12px;z-index:2147483647;display:inline-flex;align-items:center;padding:8px 12px;border-radius:999px;background:rgba(15,18,32,.82);color:#fff;text-decoration:none;font:600 13px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;border:1px solid rgba(255,255,255,.18);box-shadow:0 6px 18px rgba(0,0,0,.28);backdrop-filter:blur(6px)}
 .bg-home:hover,.bg-home:focus-visible{background:#242b55;color:#ffcc4d;outline:none}
 @media (prefers-color-scheme:light){.bg-home{background:rgba(255,255,255,.9);color:#1c2040;border-color:rgba(0,0,0,.15)}.bg-home:hover,.bg-home:focus-visible{color:#d98a00}}
 </style>
 
-<div id="app">
-  <header class="topbar">
-    <div class="brand">
-      <div class="brand-badge">M</div>
-      <div>
-        <div class="brand-title">MONOPOLY</div>
-        <div class="brand-sub">Phiên bản Việt Nam · Bàn cờ cổ điển</div>
-      </div>
-    </div>
-    <div class="top-meta">
-      <span class="meta-pill gold" id="modeBadge">Truyền thống</span>
-      <span class="meta-pill" id="topRound">Lượt 0/400</span>
-      <span class="meta-pill gold" id="topPhase">Sẵn sàng</span>
-    </div>
-    <div class="top-actions">
-      <button id="guideBtn" class="btn btn-ghost" type="button">Luật chơi</button>
-      <button id="homeBtn" class="btn btn-ghost" type="button">Về sảnh trò chơi</button>
-    </div>
-  </header>
-
-  <main class="layout">
-    <section class="board-panel panel">
-      <div class="panel-title"><span class="dot"></span> BÀN CỜ
-        <span class="board-controls" id="boardControls">
-          <button type="button" data-view="flat" class="active">Phẳng</button>
-          <button type="button" id="themeBtn">Sáng</button>
-        </span>
-      </div>
-      <div id="boardHud"></div>
-      <div id="board"></div>
-      <div id="tourDecor" aria-hidden="true"><span class="stack st1">💵💵</span><span class="stack st2">💵💵</span><span class="stack st3">💵💵</span><span class="stack st4">💵💵</span></div>
-    </section>
-  </main>
-</div>
-<div id="overlayRoot"></div>
-<div id="hoverCard"></div>
-<div id="toastRoot"></div>
-<script src="js/board.js"></script>
-<script src="js/cards.js"></script>
-<script src="js/engine.js"></script>
-<script src="js/firebase-config.js"></script>
-<script src="js/net.js"></script>
-<script src="js/room-list.js"></script>
-<script src="js/game.js"></script>
-</body>
+    <div id="root"></div>
+  </body>
 </html>

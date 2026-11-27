@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-display: "Plus Jakarta Sans", "Be Vietnam Pro", system-ui, sans-serif;
+    --font-sans: "Be Vietnam Pro", system-ui, -apple-system, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-mono-num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* 2.5D Isometric Board & Billboard Geometry */
+.iso-stage {
+  perspective: 1450px;
+}
+
+.iso-board-plane {
+  transform-style: preserve-3d;
+  transform: rotateX(55deg) rotateZ(-45deg);
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.iso-board-flat {
+  transform-style: preserve-3d;
+  transform: rotateX(0deg) rotateZ(0deg);
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.iso-tile {
+  transform-style: preserve-3d;
+}
+
+/* Counter-rotate buildings and pawns so they stand upright facing the viewer */
+.iso-billboard {
+  transform-style: preserve-3d;
+  transform-origin: center bottom;
+  transform: rotateZ(45deg) rotateX(-55deg) translateZ(2px);
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.iso-billboard-flat {
+  transform-style: preserve-3d;
+  transform-origin: center center;
+  transform: rotateZ(0deg) rotateX(0deg);
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dice-shake {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(-14deg) scale(1.08); }
+  50% { transform: rotate(12deg) scale(1.1); }
+  75% { transform: rotate(-8deg) scale(1.05); }
+}
+
+@keyframes token-hop {
+  0%, 100% { transform: rotateZ(45deg) rotateX(-55deg) translateY(0); }
+  50% { transform: rotateZ(45deg) rotateX(-55deg) translateY(-10px); }
+}
+
+@keyframes token-hop-flat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+.animate-dice-shake {
+  animation: dice-shake 0.28s ease-in-out infinite;
+}
+
+.animate-token-hop {
+  animation: token-hop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-token-hop-flat {
+  animation: token-hop-flat 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-dice-shake,
+  .animate-token-hop,
+  .animate-token-hop-flat {
+    animation: none !important;
+  }
+}
+
+/* Custom sleek scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
