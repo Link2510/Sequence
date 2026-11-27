@@ -10,7 +10,7 @@ export const VietnamMapBackdrop: React.FC = () => {
       aria-label="Bản đồ Việt Nam cùng quần đảo Hoàng Sa và Trường Sa"
       className="absolute inset-0 w-full h-full pointer-events-none select-none flex items-center justify-center p-2 sm:p-4 overflow-hidden"
     >
-      <div className="relative w-full h-full flex items-center justify-center rounded-xl overflow-hidden bg-[#FDF8E4]/92 shadow-inner">
+      <div className="relative w-full h-full flex items-center justify-center rounded-xl overflow-hidden">
         <img
           src="./assets/images_nobg.png"
           alt="Bản đồ Việt Nam cùng quần đảo Hoàng Sa và Trường Sa"

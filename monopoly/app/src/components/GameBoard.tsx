@@ -161,7 +161,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           </div>
 
           {/* Center Stage: Mode Prompt OR Dice & Roll Action */}
-          <div className="relative z-10 flex-1 flex flex-col items-center justify-center my-2">
+          <div className="relative z-10 flex-1 flex flex-col items-center justify-center my-2 bg-[#061A16]/45 backdrop-blur-[2px] rounded-xl px-3 py-2">
             {turnStep === 'SELECT_FESTIVAL' && hasControl ? (
               <div className="text-center max-w-xs bg-violet-950/85 border border-violet-400/50 rounded-2xl p-4 shadow-xl">
                 <PartyPopper className="w-8 h-8 text-amber-400 mx-auto mb-2" />
