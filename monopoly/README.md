@@ -29,13 +29,13 @@ Thư mục: `G:\AI-Models\monopoly-vn`. Mở `index.html` là chơi.
 ## Hai chế độ (chọn bằng 2 tab trên màn hình tạo phòng)
 
 - **Truyền thống**: luật Monopoly cổ điển, 40 ô tên đường Việt Nam, **không có thẻ sự kiện/power-up**, 400 lượt tối đa.
-- **Business Tour**: bàn **32 ô chia 4 khu vực** (Miền Bắc / Miền Trung / Tây Nguyên / Miền Nam) với tỉnh thành Việt Nam. Cơ chế theo luật Business Tour trên Steam (tự dựng bằng dữ liệu/asset của mình, không copy tranh của họ):
+- **Business Tour**: bàn **40 ô, giữ nguyên vị trí từng ô của bàn Monopoly gốc** (chỉ đổi tên đường tiếng Việt). Đổi ô đặc biệt theo luật Business Tour trên Steam: 4 ga → 4 resort, Tù → Đảo Mất Tích, Bãi đỗ xe → Vô Địch Thế Giới, Vào tù → Tour Thế Giới, bỏ Community Chest (ô cũ thành Thử Thách). Tự dựng bằng dữ liệu/asset của mình, không copy tranh của họ:
 
 | Cơ chế | Cách làm trong bản web |
 |---|---|
 | 4 resort | 🏖 Vịnh Hạ Long, Đà Nẵng, Phú Yên, Vũng Tàu — không bị đấu giá/mua lại; chiếm đủ 4 thắng ngay |
-| 6 triplet | 3 ô cùng hoa văn A–F; chiếm đủ 3 nhóm thắng ngay |
-| Side Monopoly | Chiếm mọi đất trong cùng 1 khu vực → thắng ngay |
+| 8 nhóm màu | 6 nhóm 3 đất + 2 nhóm 2 đất giữ nguyên vị trí; chiếm đủ 3 nhóm bất kỳ → Triple Monopoly |
+| Side Monopoly | Chiếm đủ cả 2 nhóm màu trên cùng một cạnh bàn → thắng ngay |
 | Xây theo vòng | Ghé đất mình: lần đầu chọn nhà cấp 1 hoặc 2; đi thêm 1 vòng lên cấp 3; thêm 1 vòng lên khách sạn |
 | Giá tăng dần | Giá/tiền thuê tăng theo chiều kim đồng hồ |
 | Liên hoan | Đầu trận ngẫu nhiên 2 thành phố có 🎊 — thuê gấp đôi cả trận |
@@ -50,7 +50,7 @@ Chế độ được gửi trong `meta.mode` của phòng nên chủ và khách 
 
 ## Kiểm chứng
 
-`node tools/selftest.js` → **PASS 678 / FAIL 0**: kiểm tra 40 ô cổ điển, 32 ô tour / 4 khu vực / 4 resort / 6 triplet / 1 ô tù, lên nhà theo vòng, tour thế giới, và 200 trận AI-vs-AI đều kết thúc hợp lệ.
+`node tools/selftest.js` → kiểm tra 40 ô tour cùng vị trí bàn gốc, 8 nhóm màu (2 hoặc 3 đất), 4 resort, 6 ô Thử Thách, 1 Đảo Mất Tích, lên nhà theo vòng, tour thế giới, và 200 trận AI-vs-AI đều kết thúc hợp lệ.
 
 Đã test thật trên 2 tab + Firebase: tạo phòng `M9SGNH` → tab kia thấy “Phòng đang mở” → vào → host tung xúc xắc, khách thấy ngay → host kết thúc lượt, AI đi, đến lượt khách (Sam) → khách tung xúc xắc, host thấy “Sam …” trong nhật ký. **0 lỗi console**. Phòng test đã xoá.
 

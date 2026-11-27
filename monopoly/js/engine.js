@@ -4,7 +4,7 @@
   var B = root.LOTRMonopolyBoard, CARDS = root.LOTRMonopolyCards;
   var TILES = B.TILES, START_CASH = 1500, GO_BONUS = 200, JAIL_POS = 10, JAIL_FEE = 50;
   function tiles(s) { return B.tiles(s); }
-  function jailPos(s) { return s.mode === 'tour' ? 31 : 10; }
+  function jailPos(s) { return 10; } /* Đảo Mất Tích nằm đúng ô Tù cũ */
 
   function makeRng(seed) {
     var s = (seed >>> 0) || 0x9e3779b9;
@@ -76,7 +76,7 @@
       var owned = p.properties;
       /* Side monopoly — chiếm mọi đất có thể mua trong một khu vực. */
       for (var r = 0; r < B.REGIONS.length; r++) {
-        var inRegion = board.map(function (t, i) { return t.region === r && B.isBuyable(t) ? i : -1; }).filter(function (i) { return i >= 0; });
+        var inRegion = board.map(function (t, i) { return t.region === r && t.type === 'property' ? i : -1; }).filter(function (i) { return i >= 0; });
         if (inRegion.length && inRegion.every(function (i) { return owned.indexOf(i) >= 0; })) {
           declareTourWin(s, p, 'Side Monopoly · ' + B.REGIONS[r]); break a;
         }
@@ -84,7 +84,10 @@
       /* Triple monopoly — đủ 3 nhóm hoa văn (mỗi nhóm 3 ô). */
       var patterns = {}, tripleCount = 0;
       owned.forEach(function (i) { var pat = board[i].pattern; if (pat) patterns[pat] = (patterns[pat] || 0) + 1; });
-      Object.keys(patterns).forEach(function (k) { if (patterns[k] >= 3) tripleCount++; });
+      Object.keys(patterns).forEach(function (k) {
+        var full = board.filter(function (t) { return t.pattern === k; }).length;
+        if (full >= 2 && patterns[k] >= full) tripleCount++;
+      });
       if (tripleCount >= 3) { declareTourWin(s, p, 'Triple Monopoly · 3 triplet'); break a; }
       /* Resort monopoly — đủ 4 resort. */
       var resorts = board.map(function (t, i) { return t.type === 'resort' ? i : -1; }).filter(function (i) { return i >= 0; });
@@ -113,8 +116,10 @@
   function rentOf(s, tile, diceSum) {
     var t = tiles(s)[tile], owner = ownerOf(s, tile);
     if (!owner || owner.mortgaged.indexOf(tile) >= 0) return 0;
-    if (t.type === 'railroad') {
-      var n = owner.properties.filter(function (i) { return tiles(s)[i].type === 'railroad'; }).length;
+    if (t.type === 'railroad' || t.type === 'resort') {
+      var n = owner.properties.filter(function (i) {
+        return tiles(s)[i].type === t.type;
+      }).length;
       return [0, 25, 50, 100, 200][n] || 25;
     }
     if (t.type === 'utility') {
@@ -605,7 +610,7 @@
   function aiBuy(s, p, t) {
     var reserve = 120 + (p.properties.length * 20);
     if (p.cash - t.price < reserve) return false;
-    if (t.type === 'railroad' || t.type === 'utility') return p.cash > t.price + 250;
+    if (t.type === 'railroad' || t.type === 'utility' || t.type === 'resort') return p.cash > t.price + 250;
     var group = t.color;
     var owned = p.properties.filter(function (i) { return tiles(s)[i].type === 'property' && tiles(s)[i].color === group; }).length;
     return owned >= 1 || p.cash > t.price + 500;

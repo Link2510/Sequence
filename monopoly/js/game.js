@@ -21,7 +21,7 @@
   var TOKEN_ICONS = ['🎩', '🐕', '🚂', '🎒', '🐱', '🚗', '🪙', '🏇'];
   function tokenIcon(idx) { return TOKEN_ICONS[S.tokenMap[idx] != null ? S.tokenMap[idx] : idx] || TOKEN_ICONS[idx % TOKEN_ICONS.length]; }
   function boardTiles() { return (S.s && S.s.board) || B.TILES; }
-  function tilePos(i) { return S.mode === 'tour' ? B.tourPositionOf(i) : B.positionOf(i); }
+  function tilePos(i) { return B.positionOf(i); } /* Tour giữ nguyên vị trí 40 ô của bàn gốc */
 
   function beep(f, d) { try { var C = window.AudioContext || window.webkitAudioContext; if (!C) return; S.audio = S.audio || new C(); var c = S.audio, o = c.createOscillator(), g = c.createGain(); o.frequency.value = f; g.gain.setValueAtTime(.0001, c.currentTime); g.gain.exponentialRampToValueAtTime(.07, c.currentTime + .01); g.gain.exponentialRampToValueAtTime(.0001, c.currentTime + d); o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + d + .02); } catch (e) {} }
   function log(t) { var b = $('logList'); if (b) { b.innerHTML = S.s.log.slice(-60).map(function (x) { return '<div>' + x + '</div>'; }).join(''); b.scrollTop = b.scrollHeight; } }
@@ -822,7 +822,7 @@
       '<div class="mode-tabs"><button type="button" class="mode-tab' + (S.mode === 'classic' ? ' active' : '') + '" data-mode="classic">' +
       'Truyền thống</button><button type="button" class="mode-tab' + (S.mode === 'tour' ? ' active' : '') + '" data-mode="tour">Business Tour</button></div>' +
       '<p class="mode-note">' + (S.mode === 'tour'
-        ? 'Bàn 32 ô chia 4 khu vực (tỉnh/thành Việt Nam): 4 resort, 6 nhóm triplet, xây nhà theo vòng, thẻ power-up, Vô địch/Tour thế giới, thuế 10%. Thắng bằng Side/Triple/Resort Monopoly. 120 lượt.'
+        ? 'Bàn 40 ô giữ nguyên vị trí như bản gốc: 4 ga thành 4 resort, Tù thành Đảo Mất Tích, Bãi đỗ xe thành Vô Địch, Vào tù thành Tour Thế Giới; bỏ Community Chest. Xây nhà theo vòng, thẻ power-up, thuế 10%. Thắng bằng Side/Triple/Resort Monopoly. 120 lượt.'
         : 'Luật cổ điển: 40 ô, không thẻ sự kiện, 400 lượt, chấm theo tài sản.') + '</p>' +
       '<h3>Tên của bạn</h3><div class="pick-row"><input id="playerNameInput" class="code-input" maxlength="16" style="width:220px" placeholder="Nhập tên..." value="' +
       (S.playerNames[0] || 'Frodo') + '"></div>' +
@@ -884,7 +884,7 @@
     S.s = E.createGame({ players: players, seed: Date.now(), mode: S.mode });
     E.log(S.s, 'Bắt đầu game Monopoly ' + count + ' người');
     if (S.mode === 'tour') {
-      E.log(S.s, 'Bàn 32 ô · 4 khu vực · 4 resort · 6 triplet');
+      E.log(S.s, 'Bàn 40 ô · 8 nhóm màu · 4 resort · Đảo Mất Tích');
       E.log(S.s, '🎊 Liên hoan: ' + S.s.festivals.map(function (i) { return S.s.board[i].name; }).join(', ') + ' — thuê gấp đôi cả trận');
     }
     S.lastSeen = { dice: null, pos: S.s.players.map(function (p) { return p.pos; }) };
@@ -918,10 +918,10 @@
     });
     $('guideBtn').onclick = function () {
       var rules = S.mode === 'tour'
-        ? '<p><b>Business Tour</b>: bàn 32 ô, 4 khu vực (Miền Bắc / Miền Trung / Tây Nguyên / Miền Nam) với tỉnh thành Việt Nam.</p>' +
+        ? '<p><b>Business Tour</b>: bàn 40 ô giữ nguyên khung Monopoly gốc, tên đường tiếng Việt. 4 ga → 4 resort, Tù → Đảo Mất Tích, Bãi đỗ xe → Vô Địch Thế Giới, Vào tù → Tour Thế Giới, bỏ Community Chest.</p>' +
           '<p>Đi tới đất trống là mua (resort không đấu giá). Đứng trên đất mình: ghé đầu chọn nhà cấp 1 hoặc 2; đi một vòng mới lên cấp 3; thêm một vòng lên khách sạn. Giá và thuê tăng dần theo chiều kim đồng hồ.</p>' +
           '<p>🎊 Liên hoan đầu trận: 2 thành phố thuê gấp đôi. 🏖 Resort không bị mua lại. ❓ Thử Thách cho power-up (thêm lượt, động đất, thoát tù, tour thế giới…). 🏆 Vô địch tăng thuê; 🌍 Tour thế giới trả 50đ để chọn đất; 💰 Thuế 10% tài sản; ⛓ Đảo Mất Tích giam 3 lượt.</p>' +
-          '<p>Thắng ngay khi: chiếm toàn bộ 1 khu vực (Side), 3 nhóm hoa văn (Triple), hoặc 4 resort. Ngoài ra thắng khi đối thủ phá sản hoặc hết 120 lượt thì ai nhiều tài sản nhất thắng.</p>'
+          '<p>Thắng ngay khi: chiếm đủ 2 nhóm màu trên một cạnh (Side), đủ 3 nhóm màu bất kỳ (mỗi nhóm 2 hoặc 3 đất), hoặc 4 resort. Ngoài ra thắng khi đối thủ phá sản hoặc hết 120 lượt thì ai nhiều tài sản nhất thắng.</p>'
         : '<p>Tung 2 xúc xắc, đi số ô tương ứng. Qua ô KHỞI ĐẦU nhận 200đ. Đôi liên tiếp 3 lần → vào tù.</p>' +
           '<p>Đất trống: mua hoặc đấu giá. Đất có chủ: trả tiền thuê. Đường sắt thuê theo số ga, tiện ích theo xúc xắc. Không có thẻ sự kiện.</p>' +
           '<p>Có đủ nhóm màu thì xây nhà rồi khách sạn, thuê tăng dần. Thế chấp lấy nửa giá. Không trả được tiền → phá sản.</p>' +

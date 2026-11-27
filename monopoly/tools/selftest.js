@@ -34,24 +34,31 @@ console.log('=== build options ===');
 
 console.log('=== tour board ===');
 {
-  ok(B.TOUR_TILES.length === 32, '32 tour tiles');
-  ok(B.TOUR_TILES.filter(t => t.type === 'jail').length === 1, 'exactly one jail tile');
+  ok(B.TOUR_TILES.length === 40, '40 tour tiles (classic board layout)');
+  ok(B.TOUR_TILES.every((t, i) => B.positionOf(i).row != null), 'same positions as classic board');
+  ok(B.TOUR_TILES.filter(t => t.type === 'jail').length === 1, 'exactly one jail tile (Lost Island)');
   ok(B.TOUR_TILES.filter(t => t.type === 'gotojail').length === 0, 'no go-to-jail tile');
+  ok(B.TOUR_TILES.filter(t => t.type === 'chest').length === 0, 'no community chest');
   ok(E.createGame({ mode: 'classic', players: [] }).eventChance === 0, 'classic has no events');
   const s = E.createGame({ mode: 'tour', seed: 5, players: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }] });
   ok(s.board === B.TOUR_TILES, 'tour board selected');
   ok(s.maxTurns === 120 && s.eventChance === 0.5, 'tour fast rules');
   ok(s.festivals.length === 2, 'two festival cities');
-  B.REGIONS.forEach((_, r) => ok(B.TOUR_TILES.filter(t => t.region === r).length === 8, 'region ' + r + ' has 8 tiles'));
+  ok(B.REGIONS.length === 4 && B.TOUR_TILES.every(t => t.region >= 0 && t.region < 4), 'four sides of the board');
   ok(B.TOUR_TILES.filter(t => t.type === 'resort').length === 4, 'four resorts');
-  ok(B.TOUR_TILES.filter(t => t.type === 'chance').length === 4, 'four chance tiles');
+  ok(B.TOUR_TILES.filter(t => t.type === 'chance').length === 6, 'six chance tiles');
   ok(B.TOUR_TILES.filter(t => t.type === 'championship').length === 1 &&
      B.TOUR_TILES.filter(t => t.type === 'worldtour').length === 1, 'championship and world tour tiles');
-  ['A', 'B', 'C', 'D', 'E', 'F'].forEach(p =>
-    ok(B.TOUR_TILES.filter(t => t.pattern === p).length === 3, 'triplet ' + p));
+  ok(B.TOUR_TILES.filter(t => t.type === 'tax').length === 2 &&
+     B.TOUR_TILES.filter(t => t.type === 'utility').length === 2, 'two taxes and two utilities');
+  const patterns = {};
+  B.TOUR_TILES.forEach(t => { if (t.pattern) patterns[t.pattern] = (patterns[t.pattern] || 0) + 1; });
+  ok(Object.keys(patterns).length === 8, 'eight colour sets');
+  ok(patterns.brown === 2 && patterns.darkblue === 2 &&
+     ['lightblue', 'pink', 'orange', 'red', 'yellow', 'green'].every(k => patterns[k] === 3), 'sets of 2 or 3 properties');
   /* lên nhà theo vòng */
   const p = s.players[0];
-  p.properties = [1]; p.pos = 25; p.current = 0; s.current = 0; s.phase = 'roll'; s.rng = () => 0.5;
+  p.properties = [1]; p.pos = 33; p.current = 0; s.current = 0; s.phase = 'roll'; s.rng = () => 0.5;
   const r = E.roll(s);
   ok(r.ok && s.phase === 'build' && s.pending.tile === 1, 'landing on own tile opens build phase');
   p.laps = 0; /* mô phỏng lần ghé đầu tiên */

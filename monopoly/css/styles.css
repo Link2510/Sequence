@@ -257,8 +257,8 @@ body.bt-light .prop-row span{color:#42566a}
 /* Business Tour themed board — original art, Vietnamese place names.
    Mặc định sáng; bật bt-light thì dùng lại theme tối chung (nút Sáng/Tối hoạt động ở cả 2 chế độ). */
 body.mode-tour:not(.bt-light){background:radial-gradient(1100px 650px at 50% -8%,#d9f0fb,#8fcbea 62%,#5aaed9)}
-body.mode-tour #board{grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr)}
-body.mode-tour #board .tile.center{grid-column:2/9;grid-row:2/9}
+body.mode-tour #board{grid-template-columns:repeat(11,1fr);grid-template-rows:repeat(11,1fr)}
+body.mode-tour #board .tile.center{grid-column:2/11;grid-row:2/11}
 #tourDecor{display:none;position:absolute;inset:0;pointer-events:none}
 body.mode-tour #tourDecor{display:none}
 .stack{position:absolute;font-size:28px;letter-spacing:-6px;filter:drop-shadow(0 5px 6px rgba(0,0,0,.3))}
