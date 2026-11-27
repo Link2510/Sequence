@@ -69,6 +69,8 @@ AI chơi với máy có 3 cấp, chọn ở ô “🎯 Độ khó AI” (lưu tr
 
 Nút **“Sắp theo số / Sắp theo màu”** luôn có trên bàn chơi, kể cả khi đang là lượt của đối phương. Khi không phải lượt của bạn, hai nút này chỉ đổi **thứ tự hiển thị** trên giá (`RK`), không đụng vào nước đi hay trạng thái ván — nên bạn có thể sắp sẵn ngay sau khi rút bài để chuẩn bị lượt sau.
 
+Chế độ có giới hạn thời gian: trong **5 giây cuối của lượt bạn**, đồng hồ nhấp nháy đỏ và phát tiếng bíp dồn dập bằng Web Audio (2 giây cuối nhanh/gấp đôi). Không dùng file âm thanh hay dịch vụ bên ngoài; trình duyệt chỉ cho phát sau lần bạn bấm/chạm đầu tiên.
+
 Rummikub và Hội Nhẫn đều có ô **“Phòng đang mở”** ngay trên màn hình chính: liệt kê tối đa 20 phòng còn hoạt động (chưa bắt đầu ván, tạo trong 30 phút gần đây), tự làm mới mỗi 10 giây. Bấm vào một phòng là tự điền mã phòng và vào chơi — bạn bè không cần nhớ/gõ mã. Ở Rummikub, danh sách được lọc riêng theo tab đang chọn.
 
 - Rummikub đọc `rummikub/rooms/` bằng REST, hiển thị mã + tên chủ phòng + số người.

@@ -59,6 +59,7 @@ input:focus{border-color:var(--gold)}
 .exr{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0}.exr .ex{margin:0}.cap{font-size:13px;flex:1;min-width:180px}.ok{color:#8dffb0}.no{color:#ff9a9a}
 .t em{font:700 12px system-ui;font-style:normal;margin-top:-1px}
 .tm{font-weight:700;margin-left:8px}
+.tm.warn{animation:tickPulse .5s ease-in-out infinite}@keyframes tickPulse{50%{transform:scale(1.18);text-shadow:0 0 10px #ff8a8a}}
 @media(max-width:640px){.home{grid-template-columns:1fr}.t{width:34px;height:48px;font-size:21px}.big .t{width:38px;height:54px;font-size:25px}}
 </style></head><body><a class="bg-home" href="https://boardgameace.web.app/" title="Về sảnh trò chơi" aria-label="Về sảnh trò chơi">← Sảnh trò chơi</a>
 <style>
@@ -143,11 +144,11 @@ function setup(){if(G&&myTurn()&&(!W||W.v!=G.v||W.k!=G.k)){W=mkW();S=[]}}
 function sortRack(mode){const playable=myTurn()&&W,src=playable?W.rack:(G&&G.h&&G.h[me]?G.h[me]:[]);if(!src.length)return;
  const cmp=mode==='s1'?((p,q)=>(p>103)-(q>103)||num(p)-num(q)||col(p)-col(q)):((p,q)=>(p>103)-(q>103)||col(p)-col(q)||num(p)-num(q));
  const sorted=src.slice().sort(cmp);if(playable)W.rack=sorted;RK=sorted.slice();if(G)RKk=G.k;render()}
-function leave(){if(es)es.close();if(!L&&R&&!R.g&&room){if(R.h==me)api(room,'DELETE');else api(room+'/p/'+me,'DELETE')}if(!L)localStorage.rkroom='';L=0;LS='';room='';R=G=W=null;S=[];V='home';render()}
+function leave(){if(es)es.close();if(!L&&R&&!R.g&&room){if(R.h==me)api(room,'DELETE');else api(room+'/p/'+me,'DELETE')}if(!L)localStorage.rkroom='';L=0;LS='';ALARM='';room='';R=G=W=null;S=[];V='home';render()}
 function mkGame(ids,pv,tl,md){ids=ids.slice().sort(()=>Math.random()-.5);const d=[...Array(md==2?112:106).keys()].sort(()=>Math.random()-.5);const h={};ids.forEach(i=>h[i]=d.splice(0,14));
  if(pv&&(pv.mode||0)!=(md||0))pv=null;const sc={};ids.forEach(i=>sc[i]=(pv&&pv.sc&&pv.sc[i])||0);
  return {o:ids,h,pool:d,tb:[],m:{},t:0,v:1,k:Date.now(),w:null,log:'Ván mới bắt đầu!',sc,r:(pv&&pv.r||0)+1,mode:md||0,tl:tl||0,dl:tl?Date.now()+tl*1000:0}}
-async function start(){const g=mkGame(Object.keys(R.p),G,R.tl,R.mode);HL=[];if(L){G=g;W=null;tick()}else await api(room,'PATCH',{g:JSON.stringify(g),s:'play',t:Date.now()})}
+async function start(){const g=mkGame(Object.keys(R.p),G,R.tl,R.mode);HL=[];ALARM='';if(L){G=g;W=null;tick()}else await api(room,'PATCH',{g:JSON.stringify(g),s:'play',t:Date.now()})}
 function bot(md){name=$('#nm').value.trim();if(!name)return msg('Nhập tên của bạn trước nhé');localStorage.rkname=name;md=+md||0;
  const sel=document.getElementById('ailvl'),lvl=sel?+sel.value:+((localStorage.rkailevel||1)|0);localStorage.rkailevel=lvl;
  const ai=AI_LEVELS[lvl]||AI_LEVELS[1];
@@ -293,19 +294,27 @@ function drop(f){const tg=f.tg;if(!tg)return render();const mv=S.includes(f.id)&
  else{rm(mv);W.tb.push(mv)}
  W.tb=W.tb.filter(q=>q.length);S=[];M='';render()}
 const hl=()=>{document.querySelectorAll('.drop').forEach(x=>x.classList.remove('drop'));if(DG&&DG.tg)DG.tg.el.classList.add('drop')};
-document.addEventListener('pointerdown',e=>{if(e.button||!myTurn()||!W)return;const t=e.target.closest('.t[data-i]');if(!t||!t.closest('.mine,.set'))return;DG={id:+t.dataset.i,x:e.clientX,y:e.clientY,on:0,el:t}});
+document.addEventListener('pointerdown',e=>{audio();if(e.button||!myTurn()||!W)return;const t=e.target.closest('.t[data-i]');if(!t||!t.closest('.mine,.set'))return;DG={id:+t.dataset.i,x:e.clientX,y:e.clientY,on:0,el:t}});
 document.addEventListener('pointermove',e=>{if(!DG)return;if(!DG.on){if(Math.hypot(e.clientX-DG.x,e.clientY-DG.y)<8)return;DG.on=1;const g=DG.el.cloneNode(true);g.classList.add('ghost');document.body.appendChild(g);DG.g=g;DG.el.style.opacity=.3}
  DG.g.style.left=e.clientX-20+'px';DG.g.style.top=e.clientY-28+'px';DG.tg=target(document.elementFromPoint(e.clientX,e.clientY),e.clientX);hl()});
 const endDrag=ok=>{const f=DG;if(!f)return;DG=null;if(!f.on)return;f.g.remove();hl();JD=Date.now();ok?drop(f):render()};
 document.addEventListener('pointerup',()=>endDrag(1));document.addEventListener('pointercancel',()=>endDrag(0));
 document.addEventListener('change',e=>{if(e.target&&e.target.id==='ailvl')localStorage.rkailevel=e.target.value});
-document.addEventListener('click',e=>{if(Date.now()-JD<250)return;const t=e.target.closest('.t[data-i]');
+document.addEventListener('click',e=>{audio();if(Date.now()-JD<250)return;const t=e.target.closest('.t[data-i]');
  if(t&&t.closest('.mine,.set')&&myTurn()){tog(+t.dataset.i);return}
  const a=e.target.closest('[data-a]');if(a&&!['leaveRules'].includes(a.dataset.a))act(a.dataset.a,a.dataset.k)});
-let XV=-1;
-setInterval(()=>{if(!G||G.w||!G.tl||!G.dl)return;const left=Math.ceil((G.dl-Date.now())/1000),el=document.getElementById('tm');
- if(el){el.textContent='⏱ '+Math.max(left,0)+'s';el.style.color=left<=10?'#ff8a8a':''}
- const cur=G.o[G.t];if(XV==G.v||(DG&&DG.on))return;
+let XV=-1,AC=null,ALARM='';
+function audio(){if(!AC){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;try{AC=new C()}catch(e){return null}}if(AC.state==='suspended')AC.resume().catch(()=>{});return AC}
+function beep(freq,dur,type,when,vol){const ctx=audio();if(!ctx)return;const t=when||ctx.currentTime,o=ctx.createOscillator(),g=ctx.createGain();
+ o.type=type||'square';o.frequency.value=freq;g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(vol||0.12,t+0.008);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+ o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+dur+0.02)}
+function tickAlarm(left){const ctx=audio();if(!ctx)return;const t=ctx.currentTime,hi=left<=2?1040:880;
+ beep(150,0.09,'sine',t,0.10);beep(hi,0.06,'square',t,0.11);beep(hi*0.75,0.06,'square',t+0.10,0.10);
+ if(left<=2){beep(150,0.08,'sine',t+0.18,0.10);beep(hi,0.05,'square',t+0.18,0.11);beep(hi*0.75,0.05,'square',t+0.28,0.10)}}
+setInterval(()=>{if(!G||G.w||!G.tl||!G.dl)return;const left=Math.ceil((G.dl-Date.now())/1000),el=document.getElementById('tm'),cur=G.o[G.t];
+ if(el){el.textContent='⏱ '+Math.max(left,0)+'s';el.style.color=left<=10?'#ff8a8a':'';el.classList.toggle('warn',left<=5&&cur==me)}
+ if(left>0&&left<=5&&cur==me){const key=G.v+'-'+left;if(ALARM!==key){ALARM=key;tickAlarm(left)}}
+ if(XV==G.v||(DG&&DG.on))return;
  if(left<=0&&cur==me||(!L&&left<=-4)){XV=G.v;S=[];pass(cur,1)}},500);
 setInterval(()=>{if(room&&V!='rules')pull()},4000);
 cleanup();if(room)enter(room);else render();
