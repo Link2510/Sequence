@@ -30,6 +30,13 @@ console.log('=== build options ===');
   ok(E.levelOf(p, 1) === 1, 'level updated');
   p.cash = 0;
   ok(E.buildOptions(s, p, 1).every(o => !o.enabled && o.reason === 'Không đủ tiền'), 'all disabled when broke');
+  const s2 = E.createGame({ seed: 43, players: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }] });
+  const p2 = s2.players[0];
+  p2.cash = 1000; p2.properties = [6, 8]; // chỉ 2/3 đất xanh dương nhạt
+  ok(!E.buildAllowed(s2, p2, 6) && E.buildOptions(s2, p2, 6).every(o => !o.enabled && o.reason === 'Cần chiếm đủ nhóm màu'),
+    'classic: must own full colour set to build');
+  p2.properties.push(9);
+  ok(E.buildAllowed(s2, p2, 6), 'classic: full colour set allows building');
 }
 
 console.log('=== tour board ===');

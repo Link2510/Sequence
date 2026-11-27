@@ -489,16 +489,18 @@
     var houses = p.houses[tile] || 0;
     if (houses >= 4) return p.cash >= t.houseCost && groupAllowsHotel(s, p, tile);
     var group = t.color;
+    var full = tiles(s).filter(function (x) { return x.type === 'property' && x.color === group; }).length;
     var inGroup = p.properties.filter(function (i) { return tiles(s)[i].type === 'property' && tiles(s)[i].color === group && p.mortgaged.indexOf(i) < 0 && p.hotels.indexOf(i) < 0; });
-    if (inGroup.length < 2) return false; // simplified: need at least 2 in group (classic needs full color set)
+    if (inGroup.length < full) return false; /* luật cổ điển: phải chiếm đủ cả nhóm màu */
     var min = Math.min.apply(null, inGroup.map(function (i) { return p.houses[i] || 0; }));
     return (p.houses[tile] || 0) === min && p.cash >= t.houseCost;
   }
   function groupAllowsHotel(s, p, tile) {
     var t = tiles(s)[tile];
-    return p.properties.filter(function (i) { return tiles(s)[i].type === 'property' && tiles(s)[i].color === t.color; }).every(function (i) {
-      return (p.houses[i] || 0) >= 4 && p.hotels.indexOf(i) >= 0 ? true : (p.houses[i] || 0) >= 4;
-    });
+    var group = p.properties.filter(function (i) { return tiles(s)[i].type === 'property' && tiles(s)[i].color === t.color; });
+    var full = tiles(s).filter(function (x) { return x.type === 'property' && x.color === t.color; }).length;
+    if (group.length < full) return false;
+    return group.every(function (i) { return (p.houses[i] || 0) >= 4; });
   }
   function build(s, tile) {
     var p = s.players[s.current], t = tiles(s)[tile];
@@ -521,18 +523,20 @@
     var t = tiles(s)[tile];
     if (!t || t.type !== 'property' || p.properties.indexOf(tile) < 0) return [];
     var cur = levelOf(p, tile), out = [];
+    var full = tiles(s).filter(function (x) { return x.type === 'property' && x.color === t.color; }).length;
     for (var lv = cur + 1; lv <= 5; lv++) {
       var cost = (lv - cur) * (t.houseCost || 0);
       var enabled = true, reason = '';
       if (cur === 5) { enabled = false; reason = 'Đã là khách sạn'; }
       else if (lv === 5) {
         var grp = sameGroup(s, p, tile);
-        if (grp.length < 2 || grp.some(function (i) { return levelOf(p, i) < 4; })) {
+        if (grp.length < full) { enabled = false; reason = 'Cần chiếm đủ nhóm màu'; }
+        else if (grp.some(function (i) { return levelOf(p, i) < 4; })) {
           enabled = false; reason = 'Cần 4 nhà ở mọi đất cùng nhóm màu';
         }
       } else {
         var group = sameGroup(s, p, tile);
-        if (group.length < 2) { enabled = false; reason = 'Cần ít nhất 2 đất cùng nhóm màu'; }
+        if (group.length < full) { enabled = false; reason = 'Cần chiếm đủ nhóm màu'; }
         else {
           var others = group.filter(function (i) { return i !== tile; }).map(function (i) { return levelOf(p, i); });
           var maxOther = Math.max.apply(null, others.concat([0]));
