@@ -128,8 +128,13 @@
     var usePower = !!(card.isOneRing && useRingPower);
     state.plays.push({ playerIndex: playerIndex, card: card, useRingPower: usePower });
     state.turnIndex = (state.turnIndex + 1) % state.playerCount;
-
-    if (state.plays.length === state.playerCount) return resolveTrick(state);
+    // Bỏ qua người đã hết bài (có thể xảy ra với thiết lập/chương đặc biệt).
+    var skip = 0;
+    while (state.players[state.turnIndex].hand.length === 0 && skip++ < state.playerCount) {
+      state.turnIndex = (state.turnIndex + 1) % state.playerCount;
+    }
+    var active = state.players.filter(function (x) { return x.hand.length > 0; }).length;
+    if (active === 0 || state.plays.length === active) return resolveTrick(state);
     return { ok: true, complete: false };
   }
 
@@ -170,6 +175,10 @@
       state.ledSuit = null;
       state.leaderIndex = winner.playerIndex;
       state.turnIndex = winner.playerIndex;
+      var advance = 0;
+      while (state.players[state.turnIndex].hand.length === 0 && advance++ < state.playerCount) {
+        state.turnIndex = (state.turnIndex + 1) % state.playerCount;
+      }
     }
     return result;
   }
