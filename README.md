@@ -21,7 +21,7 @@ Website tổ hợp board game tĩnh trên Firebase Hosting. Trang chủ là app 
 ├── meono/              # Mèo Nổ: bản build tĩnh độc lập + ảnh thật 13 lá, README riêng
 ├── src/assets/images/  # Ảnh không được bundle của trang chủ
 ├── sequence/index.html # Game Sequence (giữ nguyên mã nguồn cũ)
-├── rummikub/index.html # Game Rummikub
+├── rummikub/           # Game Rummikub bản mới (React/Vite) + README riêng
 ├── fotr/               # Game The Fellowship of the Ring (bản build tĩnh) + app/ (source React/Vite)
 ├── monopoly/           # Tour Việt Nam (bản build tĩnh) + app/ (source React/Vite)
 ├── legacy/index.html   # Trang redirect cho sequenceace.web.app
@@ -116,6 +116,6 @@ Lưu ý: `localStorage` gắn theo tên miền. Dữ liệu lưu cũ trên `sequ
   - Game Fellowship đóng gói sẵn SDK Firebase trong bundle; font và ảnh của game này là file local (không gọi Google Fonts).
   - Game Tour tải SDK Firebase từ `gstatic.com` **khi bấm tạo/vào phòng online**; phần chơi AI không gọi mạng.
   - Game Mèo Nổ tải SDK Firebase từ `gstatic.com` khi mở trang (dùng RTDB tại `lotr-fotr-rooms/meono-rooms/` cho phòng chơi); font Google riêng của game này từ `fonts.googleapis.com`/`fonts.gstatic.com`. Solo với AI chạy hoàn toàn trong browser.
-  - Sequence/Rummikub tải SDK Firebase từ `gstatic.com` khi dùng chế độ online, như thiết kế cũ.
+  - Sequence/Rummikub tải SDK Firebase từ `gstatic.com` khi dùng chế độ online. Rummikub bản mới còn tải font từ `fonts.googleapis.com`/`fonts.gstatic.com`; ảnh thảm bàn là file local.
 - **Lưu trên thiết bị:** một số tùy chọn/trạng thái game được lưu bằng `localStorage` trong trình duyệt. Nút “Sao chép mã phòng” ghi nội dung vào clipboard **khi bạn chủ động bấm**; ứng dụng không đọc clipboard, không chụp màn hình, không ghi phím, không truy cập camera/microphone.
 - **Tự kiểm chứng:** mở các file `index.html`/bundle JS và tìm các từ `gtag`, `analytics`, `fbq`, `getDisplayMedia`, `getUserMedia`; mở DevTools → Network để thấy toàn bộ request; xem dữ liệu RTDB/Firestore trong Firebase Console của `sequence-23c7f`.
