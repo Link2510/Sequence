@@ -36,6 +36,7 @@ firebase deploy --only hosting:boardgameace --project sequence-23c7f
 
 - **Không telemetry, không analytics, không quảng cáo, không tài khoản.**
 - Chế độ solo chạy hoàn toàn trong browser, không gọi mạng.
-- Chế độ online tải SDK Firebase từ `gstatic.com` và đọc/ghi tại `lotr-fotr-rooms/rummikub-rooms/` trong project `sequence-23c7f`: mã phòng, tên hiển thị, nước đi/trạng thái bàn, tin nhắn chat. Ai có mã phòng và rules public có thể đọc/sửa — tin tưởng lẫn nhau. Không nhập thông tin cá nhân nhạy cảm.
+- Chế độ online tải SDK Firebase từ `gstatic.com` và đọc/ghi tại `lotr-fotr-rooms/rummikub-rooms/` trong project `sequence-23c7f`: mã phòng, tên hiển thị, nước đi/trạng thái bàn, tin nhắn chat. Ai có mã phòng và rules public có thể đọc/sửa — tin tưởng lẫn nhau. Không nhập thông tin cá nhân nhạy cảm. View/intent có `updatedAt`/`ts`; phòng không hoạt động quá **30 phút** bị dọn.
 - Ảnh thảm bàn là file local. Font dùng Google Fonts (Be Vietnam Pro, Fraunces/JetBrains Mono tùy bản) tải từ `fonts.googleapis.com`/`fonts.gstatic.com` — request duy nhất tới dịch vụ ngoài khi mở trang. `localStorage/sessionStorage` giữ tên, mã phòng/người chơi và mã định danh phiên (`rmk_*`). Không đọc clipboard, không chụp màn hình, không ghi phím, không dùng camera/microphone.
 - Tự kiểm chứng: DevTools → Network để thấy request tới `gstatic.com`/`firebasedatabase.app`; tìm `gtag`/`fbq` trong bundle — không có.
+

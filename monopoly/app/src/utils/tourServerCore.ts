@@ -2095,3 +2095,19 @@ export function disconnectBrowserClient(clientId: string) {
   fakeSockets.delete(clientId);
 }
 export function getBrowserRoom(code: string) { return rooms.get(code) || null; }
+
+/** Phòng trong memory không có hoạt động 30 phút thì xoá (chủ phòng chạy logic). */
+const IDLE_ROOM_MS = 30 * 60 * 1000;
+setInterval(() => {
+  const cutoff = Date.now() - IDLE_ROOM_MS;
+  for (const [code, room] of Array.from(rooms.entries())) {
+    if (room.updatedAt >= cutoff) continue;
+    clearAiTimer(room);
+    rooms.delete(code);
+    for (const slot of room.slots) {
+      if (slot.clientId) {
+        try { emitFn(slot.clientId, { type: 'ROOM_LEFT' }); } catch { /* ignore */ }
+      }
+    }
+  }
+}, 5 * 60 * 1000);

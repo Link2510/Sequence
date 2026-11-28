@@ -33,8 +33,8 @@ export async function cleanupExpiredVisitedRooms(): Promise<void> {
   await Promise.all(list.map((code) => fetchRoom(code).catch(() => null)));
 }
 
-/** Phòng không có hoạt động (không ghi state) trong 60 phút sẽ hết hạn. */
-const ROOM_TTL_MS = 60 * 60 * 1000;
+/** Phòng không có hoạt động (không ghi state) trong 30 phút sẽ hết hạn. */
+const ROOM_TTL_MS = 30 * 60 * 1000;
 
 /** Firestore rejects `undefined` field values; drop them before writing a room. */
 function stripUndefined<T>(value: T): T {
@@ -51,7 +51,7 @@ function stripUndefined<T>(value: T): T {
   return value;
 }
 
-/** Mọi lần ghi phòng đều gia hạn TTL thêm 60 phút (Firestore TTL xoá sau đó). */
+/** Mọi lần ghi phòng đều gia hạn TTL thêm 30 phút (Firestore TTL xoá sau đó). */
 function roomForWrite(room: RoomState) {
   return {
     ...stripUndefined(room),
@@ -197,7 +197,7 @@ export async function fetchRoom(
     if (!snap.exists()) return { room: null, mode };
     const room = snap.data() as RoomState;
     if (isRoomExpired(room)) {
-      // Quá 60 phút không hoạt động: coi như phòng đã đóng và dọn luôn.
+      // Quá 30 phút không hoạt động: coi như phòng đã đóng và dọn luôn.
       try {
         await deleteDoc(ref);
       } catch {

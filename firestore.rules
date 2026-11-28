@@ -4,7 +4,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Phòng chơi The Fellowship of the Ring: Trick-Taking Game.
     // Mã phòng dạng RING-XXXXX; mỗi phòng tối đa 4 ghế.
-    // expiresAt là TTL: mỗi lần ghi phòng đều gia hạn thêm 60 phút.
+    // expiresAt là TTL: mỗi lần ghi phòng đều gia hạn thêm 30 phút.
     match /rooms/{roomCode} {
       allow get: if roomCode.matches('^[A-Z0-9\\-]{4,16}$');
       allow list: if false;

@@ -37,7 +37,7 @@ export default function App() {
   const [soloGame, setSoloGame] = useState<GameState | null>(null);
   const [inviteRoomCode, setInviteRoomCode] = useState<string | null>(null);
 
-  // Dọn các phòng đã quá 60 phút không hoạt động từ danh sách phòng đã ghé.
+  // Dọn các phòng đã quá 30 phút không hoạt động từ danh sách phòng đã ghé.
   useEffect(() => {
     void cleanupExpiredVisitedRooms();
   }, []);
@@ -245,7 +245,7 @@ export default function App() {
               <div className="space-y-1.5">
                 <div className="text-sm font-display font-bold text-[#E5B85C]">Chơi Cùng Bạn Bè</div>
                 <p className="text-xs text-[#C8C0AB] leading-relaxed">
-                  Tạo phòng, gửi link mời bạn bè; ghế trống tự động có AI đồng đội. Phòng tự đóng sau 60 phút không hoạt động.
+                  Tạo phòng, gửi link mời bạn bè; ghế trống tự động có AI đồng đội. Phòng tự đóng sau 30 phút không hoạt động.
                 </p>
               </div>
             </section>

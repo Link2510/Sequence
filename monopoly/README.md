@@ -14,6 +14,7 @@ Trò chơi cờ tỷ phú chiến thuật, bàn **32 ô** với địa danh Vi�
   - `app/src/utils/tourServerCore.ts`: logic phòng/lượt đi (port từ `server.ts` để chạy trong browser).
   - `app/src/utils/firebaseRooms.ts`: lớp vận chuyển qua RTDB — chủ phòng xử lý intent, phát view riêng cho từng client.
 - Đường dẫn dữ liệu: `lotr-fotr-rooms/tour-rooms/{intents,views}` trong project Firebase `sequence-23c7f` — **dùng chung rules hiện có, không cần deploy rules**.
+- Phòng không có hoạt động quá **30 phút** tự bị dọn: view/intent RTDB có `updatedAt`/`ts`, engine trong browser cũng xoá phòng memory sau 30p.
 
 ## Build lại từ source mới
 

@@ -17,6 +17,9 @@ const CFG = {
   appId: '1:535984225423:web:53fd014176d3c3b59104fa',
 };
 const ROOT = 'lotr-fotr-rooms/tour-rooms';
+/** Phòng/view không có hoạt động trong 30 phút sẽ bị dọn. */
+const ROOM_TTL_MS = 30 * 60 * 1000;
+let sweepStarted = false;
 
 let db: any = null;
 let initPromise: Promise<boolean> | null = null;
@@ -52,7 +55,7 @@ function initialize(): Promise<boolean> {
         w.firebase.initializeApp(CFG);
       db = w.firebase.database();
       setEmitFn((clientId: string, msg: ServerWsMessage) => {
-        db.ref(`${ROOT}/views/${clientId}`).set(msg);
+        db.ref(`${ROOT}/views/${clientId}`).set({ ...msg, updatedAt: Date.now() });
       });
       return true;
     } catch {
@@ -84,6 +87,28 @@ function normalize(msg: ServerWsMessage): ServerWsMessage {
   return msg;
 }
 
+/** Dọn view/intent quá hạn; RTDB không có TTL server nên làm ở client. */
+async function sweepStaleRooms(): Promise<void> {
+  if (!db) return;
+  const cutoff = Date.now() - ROOM_TTL_MS;
+  try {
+    const views = await db.ref(`${ROOT}/views`).once('value');
+    const intents = await db.ref(`${ROOT}/intents`).once('value');
+    const jobs: Promise<any>[] = [];
+    views.forEach((snap: any) => {
+      const v = snap.val();
+      if (v && (v.updatedAt || 0) < cutoff) jobs.push(snap.ref.remove());
+    });
+    intents.forEach((snap: any) => {
+      const v = snap.val();
+      if (v && (v.ts || 0) < cutoff) jobs.push(snap.ref.remove());
+    });
+    await Promise.all(jobs);
+  } catch {
+    /* ignore transient errors */
+  }
+}
+
 function startHostListening() {
   if (hostListening || !db) return;
   hostListening = true;
@@ -107,6 +132,11 @@ export async function connectFirebaseRooms(
   onMessage = handler;
   const ok = await initialize();
   if (!ok) return false;
+  void sweepStaleRooms();
+  if (!sweepStarted) {
+    sweepStarted = true;
+    setInterval(() => void sweepStaleRooms(), 10 * 60 * 1000);
+  }
   db.ref(`${ROOT}/views/${clientId}`).on('value', (snap: any) => {
     const msg = snap.val();
     if (msg && typeof msg.type === 'string') onMessage(normalize(msg));
@@ -129,7 +159,7 @@ export function sendFirebaseMessage(msg: ClientWsMessage) {
   if (hostAuthority) {
     handleBrowserMessage(myClientId, raw);
   } else {
-    db.ref(`${ROOT}/intents`).push({ clientId: myClientId, raw });
+    db.ref(`${ROOT}/intents`).push({ clientId: myClientId, raw, ts: Date.now() });
   }
 }
 

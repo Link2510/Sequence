@@ -36,7 +36,8 @@ Source gốc chạy WebSocket (`server.ts`); với static hosting phải giữ `
 ## Quyền riêng tư
 
 - **Không telemetry, không analytics, không quảng cáo, không tài khoản.**
-- **Firebase Realtime Database** (`lotr-fotr-rooms/meono-rooms/{intents,views}` trong project `sequence-23c7f`) lưu mã phòng, tên hiển thị, avatar và nước đi/trạng thái bàn. Ai có mã phòng và rules public có thể đọc/sửa — tin tưởng lẫn nhau. Không nhập thông tin cá nhân nhạy cảm vào tên người chơi.
+- **Firebase Realtime Database** (`lotr-fotr-rooms/meono-rooms/{intents,views}` trong project `sequence-23c7f`) lưu mã phòng, tên hiển thị, avatar và nước đi/trạng thái bàn. Ai có mã phòng và rules public có thể đọc/sửa — tin tưởng lẫn nhau. Không nhập thông tin cá nhân nhạy cảm vào tên người chơi. Phòng/view không hoạt động quá **30 phút** bị dọn (client quét mỗi 10 phút; engine cũng xoá phòng memory).
 - SDK Firebase tải từ `gstatic.com` khi mở trang (chế độ online); chế độ solo chạy hoàn toàn trong browser. Font Google (Bricolage Grotesque, JetBrains Mono, Plus Jakarta Sans) tải từ `fonts.googleapis.com`/`fonts.gstatic.com`.
 - **localStorage/sessionStorage** giữ tên, avatar và mã phiên (`meono_player_name`, `meono_avatar_id`, `meono_session_id`). Không đọc clipboard, không chụp màn hình, không ghi phím, không dùng camera/microphone.
 - Tự kiểm chứng: DevTools → Network để thấy toàn bộ request; Firebase Console để xem dữ liệu RTDB; tìm `gtag`/`fbq` trong bundle — không có.
+
