@@ -1,11 +1,14 @@
 # BoardGame Ace — Sảnh trò chơi
 
-Website tổ hợp các board game, chạy hoàn toàn bằng HTML/CSS/JavaScript tĩnh trên Firebase Hosting.
+Website tổ hợp board game tĩnh trên Firebase Hosting. Trang chủ là app React/Vite; các game là trang riêng.
 
 - **Trang chủ:** https://boardgameace.web.app/
 - **Sequence:** https://boardgameace.web.app/sequence/
 - **Rummikub:** https://boardgameace.web.app/rummikub/
 - **The Fellowship of the Ring: Trick-Taking Game:** https://boardgameace.web.app/fotr/
+- **Tour Việt Nam:** https://boardgameace.web.app/monopoly/
+- **Mèo Nổ:** https://boardgameace.web.app/meono/
+- **Duel** vẫn nằm ở https://boardgameace.web.app/duel/ (không còn thẻ trên trang chủ mới).
 - **Site cũ:** https://sequenceace.web.app/ tự động chuyển về trang chủ mới.
 
 > Không dùng được tên `boardgame` vì ID này đã bị một project Firebase khác giữ trên toàn hệ thống. Tên `boardgameace` đã được chọn để giữ cùng phong cách với `sequenceace` cũ.
@@ -14,10 +17,15 @@ Website tổ hợp các board game, chạy hoàn toàn bằng HTML/CSS/JavaScrip
 
 ```text
 .
-├── index.html          # Trang chủ (sảnh trò chơi), đọc danh sách GAMES
+├── index.html          # Trang chủ mới (React/Vite), 5 thẻ đều là link sang game riêng
+├── assets/             # Bundle + ảnh của trang chủ
+├── meono/index.html    # Trang riêng Mèo Nổ (dùng chung bundle với trang chủ)
+├── src/assets/images/  # Ảnh không được bundle của trang chủ
 ├── sequence/index.html # Game Sequence (giữ nguyên mã nguồn cũ)
 ├── rummikub/index.html # Game Rummikub
+├── duel/               # Game Duel (vẫn hoạt động, không có thẻ trên trang chủ mới)
 ├── fotr/               # Game The Fellowship of the Ring (bản build tĩnh) + app/ (source React/Vite)
+├── monopoly/           # Tour Việt Nam (bản build tĩnh) + app/ (source React/Vite)
 ├── legacy/index.html   # Trang redirect cho sequenceace.web.app
 ├── .firebaserc         # Project sequence-23c7f + 2 hosting target
 ├── firebase.json       # boardgameace = ., sequenceace = legacy/ + RTDB + Firestore rules
@@ -27,7 +35,7 @@ Website tổ hợp các board game, chạy hoàn toàn bằng HTML/CSS/JavaScrip
 └── .github/workflows/  # Auto deploy khi push main / preview khi có PR
 ```
 
-Sequence và Rummikub là file `index.html` đơn. Fellowship là app React/Vite: source nằm ở `fotr/app/`, build ra `fotr/index.html` + `fotr/assets/` + `fotr/src/assets/` + `fotr/fonts/`. Khi thêm game mới, tạo thư mục riêng có `index.html` (kèm asset nếu cần) rồi thêm một phần tử vào mảng `GAMES` trong `index.html` gốc với `url:"./game-moi/"`.
+Sequence và Rummikub là file `index.html` đơn. Fellowship và Tour là app React/Vite (`fotr/app/`, `monopoly/app/`). Trang chủ mới được build từ source ngoài repo `G:\AI\web\Trang-chủ` (`base:'./'`, 2 entry `index.html` + `meono.html`), copy ngược ra root repo. Danh sách 5 game nằm ở `src/boardgameace/boardGames.ts` (và bản mirror `src/data/boardGames.ts`); mọi thẻ đều dùng `<a href>` với `relativeUrl`/`absoluteUrl`, không còn nút “Chơi Ngay” nhúng trong trang chủ. Khi thêm game mới: tạo thư mục riêng có `index.html`, rồi thêm phần tử vào `BOARD_GAMES` với `relativeUrl:"./game-moi/"` + `absoluteUrl:"https://boardgameace.web.app/game-moi/"`. Lưu ý `resolveGameUrl()` chỉ dùng path tương đối khi hostname là `boardgameace.web.app`; trên `boardgameace.firebaseapp.com` nó dùng URL tuyệt đối.
 
 ## Triển khai
 
@@ -101,10 +109,14 @@ Lưu ý: `localStorage` gắn theo tên miền. Dữ liệu lưu cũ trên `sequ
 
 ## Quyền riêng tư
 
-- **Không có telemetry, analytics, quảng cáo, tracking hay tài khoản người dùng.** Mã nguồn là HTML tĩnh; không có script `gtag`, `googletagmanager`, `fbq` hay pixel.
+- **Không có telemetry, analytics, quảng cáo, tracking hay tài khoản người dùng.** Toàn bộ là file tĩnh (HTML/JS/CSS); kiểm tra bundle không thấy `gtag`, `googletagmanager`, `fbq` hay pixel.
 - **Firebase Hosting (Google)** nhận các request HTTP thông thường khi tải trang (địa chỉ IP, user-agent, đường dẫn) và ghi log vận hành theo dịch vụ; đây là đặc tính của hosting, không phải tính năng theo dõi do ứng dụng thêm.
 - **Firebase Realtime Database** của project `sequence-23c7f` được các game dùng để đồng bộ phòng chơi: mã phòng, nước đi/trạng thái bàn, tên hiển thị nếu bạn nhập. Các nhánh đang dùng: `rooms/` (Sequence), `rummikub/rooms/` (Rummikub), `lotr-fotr-rooms/` (Duel + Tour Việt Nam; các phòng Hội Nhẫn cũ đã dọn 28/11/2026). Dữ liệu nằm trong RTDB của chính project cũ; không có đăng nhập/cloud account. Quyền đọc/ghi trên các nhánh phòng là công khai để game chạy không cần tài khoản; ô “Phòng đang mở” cũng hiển thị công khai mã phòng và tên chủ phòng. Vì vậy không nên gõ thông tin cá nhân nhạy cảm vào tên người chơi hoặc mã phòng.
 - **Firebase Firestore** của cùng project được game Fellowship dùng để đồng bộ phòng: mã phòng `RING-XXXXX`, tên hiển thị, ghế ngồi và trạng thái ván. Collection `rooms/` cho phép đọc một phòng khi biết mã và ghi/ cập nhật phòng đó (tối đa 4 ghế), không cho liệt kê toàn bộ. Mỗi lần ghi phòng sẽ gắn `expiresAt` = hiện tại + 60 phút; phòng quá hạn bị coi là đóng và tự xoá khi có người mở lại link (hoặc khi app khởi động, dọn các phòng đã ghé). Rules cũng chỉ cho xoá phòng khi đã quá `expiresAt`. Không có đăng nhập; ai biết mã phòng đều có thể vào phòng đó. Lưu ý: chính sách TTL phía server của Firestore yêu cầu project có billing, nên project Spark dùng cơ chế dọn phía client như trên.
-- **Tài nguyên bên thứ ba:** SDK Firebase được đóng gói sẵn trong bundle của game, không tải từ CDN. Toàn bộ font (Cormorant Garamond, Plus Jakarta Sans, JetBrains Mono) và ảnh minh họa của Fellowship là file local trong project — không gọi Google Fonts hay dịch vụ ngoài.
+- **Tài nguyên bên thứ ba:**
+  - Trang chủ mới tải font Google Fonts (Cormorant Garamond, JetBrains Mono, Plus Jakarta Sans) từ `fonts.googleapis.com`/`fonts.gstatic.com` — đây là request duy nhất tới dịch vụ ngoài của trang chủ; không có telemetry hay pixel. Ảnh minh họa 5 game là file local.
+  - Game Fellowship đóng gói sẵn SDK Firebase trong bundle; font và ảnh của game này là file local (không gọi Google Fonts).
+  - Game Tour tải SDK Firebase từ `gstatic.com` **khi bấm tạo/vào phòng online**; phần chơi AI không gọi mạng.
+  - Sequence/Rummikub/Duel tải SDK Firebase từ `gstatic.com` khi dùng chế độ online, như thiết kế cũ.
 - **Lưu trên thiết bị:** một số tùy chọn/trạng thái game được lưu bằng `localStorage` trong trình duyệt. Nút “Sao chép mã phòng” ghi nội dung vào clipboard **khi bạn chủ động bấm**; ứng dụng không đọc clipboard, không chụp màn hình, không ghi phím, không truy cập camera/microphone.
 - **Tự kiểm chứng:** mở các file `index.html`/bundle JS và tìm các từ `gtag`, `analytics`, `fbq`, `getDisplayMedia`, `getUserMedia`; mở DevTools → Network để thấy toàn bộ request; xem dữ liệu RTDB/Firestore trong Firebase Console của `sequence-23c7f`.

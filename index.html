@@ -1,119 +1,26 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sảnh Trò Chơi</title>
-<style>
-  :root{
-    --bg:#0f1220; --bg2:#1a1f3a; --card:#1b2040; --card-h:#242b55;
-    --text:#f1f3ff; --muted:#a6acd1; --accent:#ffcc4d; --border:rgba(255,255,255,.08);
-  }
-  @media (prefers-color-scheme: light){
-    :root{ --bg:#f3f4fb; --bg2:#e3e6f7; --card:#fff; --card-h:#fff; --text:#1c2040; --muted:#5b6190; --accent:#d98a00; --border:rgba(0,0,0,.08); }
-  }
-  *{box-sizing:border-box;margin:0}
-  body{
-    min-height:100vh; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-    color:var(--text);
-    background:radial-gradient(1200px 600px at 50% -10%, var(--bg2), var(--bg));
-    padding:40px 20px 60px;
-  }
-  header{text-align:center;max-width:720px;margin:0 auto 40px}
-  header h1{font-size:clamp(2rem,6vw,3rem);letter-spacing:.5px}
-  header h1 span{color:var(--accent)}
-  header p{margin-top:10px;color:var(--muted)}
-  .search{
-    margin:22px auto 0; max-width:360px; width:100%; padding:12px 18px; border-radius:999px;
-    border:1px solid var(--border); background:var(--card); color:var(--text); font-size:1rem; outline:none;
-  }
-  .search:focus{border-color:var(--accent)}
-  .grid{
-    max-width:1000px;margin:0 auto;display:grid;gap:20px;
-    grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
-  }
-  .card{
-    display:flex;flex-direction:column;gap:12px;text-decoration:none;color:inherit;
-    background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px;
-    transition:transform .2s, background .2s, box-shadow .2s;
-    position:relative;overflow:hidden;
-  }
-  .card::before{
-    content:"";position:absolute;inset:0 0 auto 0;height:5px;background:var(--c,var(--accent));
-  }
-  .card:hover,.card:focus-visible{transform:translateY(-6px);background:var(--card-h);box-shadow:0 14px 34px rgba(0,0,0,.25);outline:none}
-  .icon{
-    width:64px;height:64px;border-radius:16px;display:grid;place-items:center;font-size:2rem;
-    background:color-mix(in srgb, var(--c,var(--accent)) 22%, transparent);
-  }
-  .card h2{font-size:1.3rem}
-  .card p{color:var(--muted);font-size:.95rem;line-height:1.5;flex:1}
-  .tags{display:flex;gap:6px;flex-wrap:wrap}
-  .tag{font-size:.75rem;padding:3px 10px;border-radius:999px;background:var(--bg2);color:var(--muted)}
-  .play{font-weight:600;color:var(--c,var(--accent))}
-  .card.soon{cursor:default;opacity:.6}
-  .card.soon:hover,.card.soon:focus-visible{transform:none;box-shadow:none;background:var(--card)}
-  .card.soon .play{color:var(--muted)}
-  .empty{text-align:center;color:var(--muted);margin-top:30px;display:none}
-  footer{text-align:center;margin-top:48px;color:var(--muted);font-size:.85rem}
-</style>
-</head>
-<body>
-<header>
-  <h1>🎮 Sảnh <span>Trò Chơi</span></h1>
-  <p>Chọn một trò chơi, tạo phòng và rủ bạn bè vào chơi cùng.</p>
-  <input class="search" id="q" type="search" placeholder="Tìm trò chơi..." aria-label="Tìm trò chơi">
-</header>
-
-<main class="grid" id="grid"></main>
-<p class="empty" id="empty">Không tìm thấy trò chơi nào.</p>
-
-<script>
-// ====== DANH SÁCH TRÒ CHƠI — sửa đường dẫn (url) cho đúng thư mục trên hosting của bạn ======
-const GAMES = [
-  { name:"Sequence", icon:"🃏", color:"#4f8cff", url:"./sequence/",
-    desc:"Xếp 5 quân liên tiếp trên bàn cờ bài. Chơi 2–3 đội, có chế độ chơi với máy.",
-    tags:["Đội","Bài","Nhiều người"] },
-  { name:"Rummikub", icon:"🔢", color:"#ff7a45", url:"./rummikub/",
-    desc:"Xếp quân số thành bộ và dãy để hết quân trước. Tạo phòng, chơi với máy.",
-    tags:["Quân số","Nhiều người","Có hướng dẫn"] },
-  { name:"The Fellowship of the Ring: Trick-Taking Game", icon:"💍", color:"#3fbf7f", url:"./fotr/",
-    desc:"Game ăn lượt hợp tác 4 người: cùng đưa Chiếc Nhẫn qua 18 chương, có AI đồng đội, hướng dẫn từng bước và phòng chơi bạn bè.",
-    tags:["Hợp tác","Ăn lượt","18 chương","AI","Bạn bè"] },
-  { name:"Duel for Middle-Earth", icon:"⚔️", color:"#d8b46a", url:"./duel/",
-    desc:"Đối đầu Hội huynh đệ vs Sauron qua 3 chương. Chơi với AI, song ngữ, có hướng dẫn ngay trên màn hình.",
-    tags:["Đối đầu","2 người","AI","Thẻ bài"] },
-  { name:"Tour Việt Nam", icon:"🗺️", color:"#d94f4f", url:"./monopoly/",
-    desc:"Bàn cờ 32 ô khắp Việt Nam. Chơi với AI hoặc tạo phòng với bạn bè.",
-    tags:["Bàn cờ","Nhiều người","AI"] }
-];
-
-const grid = document.getElementById("grid");
-const empty = document.getElementById("empty");
-const q = document.getElementById("q");
-
-function render(list){
-  grid.innerHTML = "";
-  list.forEach(g=>{
-    const el = document.createElement(g.soon ? "div" : "a");
-    el.className = "card" + (g.soon ? " soon" : "");
-    if (!g.soon) el.href = g.url;
-    el.style.setProperty("--c", g.color);
-    el.innerHTML =
-      `<div class="icon">${g.icon}</div>
-       <h2>${g.name}</h2>
-       <p>${g.desc}</p>
-       <div class="tags">${g.tags.map(t=>`<span class="tag">${t}</span>`).join("")}</div>
-       <span class="play">${g.soon ? "Sắp ra mắt" : "Vào chơi →"}</span>`;
-    grid.appendChild(el);
-  });
-  empty.style.display = list.length ? "none" : "block";
-}
-q.addEventListener("input", ()=>{
-  const s = q.value.trim().toLowerCase();
-  render(GAMES.filter(g => (g.name+" "+g.desc+" "+g.tags.join(" ")).toLowerCase().includes(s)));
-});
-render(GAMES);
-</script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BoardGameAce — Sảnh Board Game Chơi Cùng Bạn Bè</title>
+    <meta name="description" content="Tổng hợp board game chơi cùng bạn bè trên trình duyệt: Sequence, Rummikub, The Fellowship of the Ring, Tour Việt Nam và Mèo Nổ." />
+    <meta property="og:title" content="BoardGameAce — Sảnh Board Game Chơi Cùng Bạn Bè" />
+    <meta property="og:description" content="Chọn một board game yêu thích, xem luật nhanh với hình ảnh trực quan, luyện tập với AI hoặc tạo phòng chơi cùng bạn bè." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script type="module" crossorigin src="./assets/main-e9C2sa4D.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/src-appdp20O.js">
+    <link rel="stylesheet" crossorigin href="./assets/src-DNcry4qA.css">
+  </head>
+  <body class="bg-[#0E1411] text-[#F5EFE0] antialiased selection:bg-[#E5A93B]/30 selection:text-[#F5EFE0]">
+    <div id="root"></div>
+  </body>
 </html>
+
