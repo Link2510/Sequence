@@ -18,7 +18,7 @@ Website tổ hợp board game tĩnh trên Firebase Hosting. Trang chủ là app 
 .
 ├── index.html          # Trang chủ mới (React/Vite), 5 thẻ đều là link sang game riêng
 ├── assets/             # Bundle + 6 ảnh JPG hashed của trang chủ (copy toàn bộ dist/assets/)
-├── meono/index.html    # Trang riêng Mèo Nổ (dùng chung bundle với trang chủ)
+├── meono/              # Mèo Nổ: bản build tĩnh độc lập + ảnh thật 13 lá, README riêng
 ├── src/assets/images/  # Ảnh không được bundle của trang chủ
 ├── sequence/index.html # Game Sequence (giữ nguyên mã nguồn cũ)
 ├── rummikub/index.html # Game Rummikub
@@ -33,7 +33,7 @@ Website tổ hợp board game tĩnh trên Firebase Hosting. Trang chủ là app 
 └── .github/workflows/  # Auto deploy khi push main / preview khi có PR
 ```
 
-Sequence và Rummikub là file `index.html` đơn. Fellowship và Tour là app React/Vite (`fotr/app/`, `monopoly/app/`). Trang chủ mới được build từ source ngoài repo `G:\AI\web\Trang-chủ` (`base:'./'`, 2 entry `index.html` + `meono.html`), copy ngược ra root repo. Danh sách 5 game nằm ở `src/boardgameace/boardGames.ts` (và bản mirror `src/data/boardGames.ts`); mọi thẻ đều dùng `<a href>` với `relativeUrl`/`absoluteUrl`, không còn nút “Chơi Ngay” nhúng trong trang chủ. Khi thêm game mới: tạo thư mục riêng có `index.html`, rồi thêm phần tử vào `BOARD_GAMES` với `relativeUrl:"./game-moi/"` + `absoluteUrl:"https://boardgameace.web.app/game-moi/"`. Lưu ý `resolveGameUrl()` chỉ dùng path tương đối khi hostname là `boardgameace.web.app`; trên `boardgameace.firebaseapp.com` nó dùng URL tuyệt đối.
+Sequence và Rummikub là file `index.html` đơn. Fellowship và Tour là app React/Vite (`fotr/app/`, `monopoly/app/`). Mèo Nổ là app React/Vite build riêng từ source ngoài repo `G:\AI\web\mèo-nổ-—-exploding-kittens` (browser port của engine + transport RTDB, xem `meono/README.md`). Trang chủ mới được build từ source ngoài repo `G:\AI\web\Trang-chủ` (`base:'./'`, 2 entry `index.html` + `meono.html`), copy ngược ra root repo. Danh sách 5 game nằm ở `src/boardgameace/boardGames.ts` (và bản mirror `src/data/boardGames.ts`); mọi thẻ đều dùng `<a href>` với `relativeUrl`/`absoluteUrl`, không còn nút “Chơi Ngay” nhúng trong trang chủ. Khi thêm game mới: tạo thư mục riêng có `index.html`, rồi thêm phần tử vào `BOARD_GAMES` với `relativeUrl:"./game-moi/"` + `absoluteUrl:"https://boardgameace.web.app/game-moi/"`. Lưu ý `resolveGameUrl()` chỉ dùng path tương đối khi hostname là `boardgameace.web.app`; trên `boardgameace.firebaseapp.com` nó dùng URL tuyệt đối.
 
 ## Triển khai
 
@@ -115,6 +115,7 @@ Lưu ý: `localStorage` gắn theo tên miền. Dữ liệu lưu cũ trên `sequ
   - Trang chủ mới tải font Google Fonts (Cormorant Garamond, JetBrains Mono, Plus Jakarta Sans) từ `fonts.googleapis.com`/`fonts.gstatic.com` — đây là request duy nhất tới dịch vụ ngoài của trang chủ; không có telemetry hay pixel. Ảnh minh họa 5 game là file local.
   - Game Fellowship đóng gói sẵn SDK Firebase trong bundle; font và ảnh của game này là file local (không gọi Google Fonts).
   - Game Tour tải SDK Firebase từ `gstatic.com` **khi bấm tạo/vào phòng online**; phần chơi AI không gọi mạng.
+  - Game Mèo Nổ tải SDK Firebase từ `gstatic.com` khi mở trang (dùng RTDB tại `lotr-fotr-rooms/meono-rooms/` cho phòng chơi); font Google riêng của game này từ `fonts.googleapis.com`/`fonts.gstatic.com`. Solo với AI chạy hoàn toàn trong browser.
   - Sequence/Rummikub tải SDK Firebase từ `gstatic.com` khi dùng chế độ online, như thiết kế cũ.
 - **Lưu trên thiết bị:** một số tùy chọn/trạng thái game được lưu bằng `localStorage` trong trình duyệt. Nút “Sao chép mã phòng” ghi nội dung vào clipboard **khi bạn chủ động bấm**; ứng dụng không đọc clipboard, không chụp màn hình, không ghi phím, không truy cập camera/microphone.
 - **Tự kiểm chứng:** mở các file `index.html`/bundle JS và tìm các từ `gtag`, `analytics`, `fbq`, `getDisplayMedia`, `getUserMedia`; mở DevTools → Network để thấy toàn bộ request; xem dữ liệu RTDB/Firestore trong Firebase Console của `sequence-23c7f`.
