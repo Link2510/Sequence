@@ -8,7 +8,7 @@ import { TutorialView } from './components/TutorialView';
 import { CHAPTERS, CHARACTERS } from './game/chapters';
 import { dealChapter } from './game/engine';
 import { CharacterId, GameState } from './game/types';
-import { getLocalPlayerIdentity } from './services/roomService';
+import { cleanupExpiredVisitedRooms, getLocalPlayerIdentity } from './services/roomService';
 
 type AppView = 'HOME' | 'AI_SELECT' | 'PLAYING_AI' | 'MULTIPLAYER' | 'TUTORIAL';
 
@@ -36,6 +36,11 @@ export default function App() {
   const [difficultyFilter, setDifficultyFilter] = useState<string>('ALL');
   const [soloGame, setSoloGame] = useState<GameState | null>(null);
   const [inviteRoomCode, setInviteRoomCode] = useState<string | null>(null);
+
+  // Dọn các phòng đã quá 60 phút không hoạt động từ danh sách phòng đã ghé.
+  useEffect(() => {
+    void cleanupExpiredVisitedRooms();
+  }, []);
 
   // Detect ?room=CODE invite link on initial load
   useEffect(() => {
@@ -238,9 +243,9 @@ export default function App() {
                 </p>
               </div>
               <div className="space-y-1.5">
-                <div className="text-sm font-display font-bold text-[#E5B85C]">Sẵn Sàng Firebase Spark</div>
+                <div className="text-sm font-display font-bold text-[#E5B85C]">Chơi Cùng Bạn Bè</div>
                 <p className="text-xs text-[#C8C0AB] leading-relaxed">
-                  Tạo phòng gửi link mời bạn bè, cấu hình sẵn Hosting + Firestore rules gói Spark miễn phí.
+                  Tạo phòng, gửi link mời bạn bè; ghế trống tự động có AI đồng đội. Phòng tự đóng sau 60 phút không hoạt động.
                 </p>
               </div>
             </section>

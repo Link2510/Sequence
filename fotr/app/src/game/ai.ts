@@ -88,6 +88,36 @@ export function chooseAiCard(state: GameState, seatIndex: number): AiDecision {
   const desire = wantsMoreTricks(state, seatIndex);
   const leadSuit = state.currentTrick[0]?.card.suit;
   const trickHasRings = state.currentTrick.some((p) => p.card.suit === 'rings');
+  const trickHasShadows = state.currentTrick.some((p) => p.card.suit === 'shadows');
+  const ringsInTrick = state.currentTrick.filter((p) => p.card.suit === 'rings').length;
+  const ownRingsWon = seat.wonCards.filter((c) => c.suit === 'rings').length;
+
+  // Determine forbidden suits that this seat must NEVER win in this chapter
+  const key = `${state.chapterId}:${seat.characterId}`;
+  const forbidShadows = [
+    '4:tom_bombadil',
+    '5:goldberry',
+    '13:merry',
+    '15:samwise',
+    '16:gimli',
+  ].includes(key);
+  const forbidRings =
+    ['14:boromir', '18:boromir'].includes(key) ||
+    (['5:frodo', '7:frodo', '17:galadriel'].includes(key) && ownRingsWon >= 1) ||
+    (key === '16:frodo' && ownRingsWon >= 2);
+  const maxAllowedRingsThisTrick =
+    ['5:frodo', '7:frodo', '17:galadriel'].includes(key)
+      ? 1 - ownRingsWon
+      : key === '16:frodo'
+      ? 2 - ownRingsWon
+      : 5;
+
+  const trickIsPoisonous =
+    (forbidShadows && trickHasShadows) ||
+    (forbidRings && trickHasRings) ||
+    ringsInTrick > maxAllowedRingsThisTrick;
+
+  const effectiveDesire: 'avoid' | 'need' | 'neutral' = trickIsPoisonous ? 'avoid' : desire;
 
   // Check if a teammate currently winning desperately wants to AVOID tricks
   let currentWinnerIdx = -1;
@@ -168,16 +198,23 @@ export function chooseAiCard(state: GameState, seatIndex: number): AiDecision {
   const losingChoices: Card[] = [];
 
   for (const card of legal) {
+    const cardBreaksShadowRule = forbidShadows && card.suit === 'shadows';
+    const cardBreaksRingRule =
+      (forbidRings && card.suit === 'rings') ||
+      (card.suit === 'rings' && ringsInTrick + 1 > maxAllowedRingsThisTrick);
+
     if (card.id === 'rings-1') {
       // 1 of Rings can either win or lose depending on choice
-      winningChoices.push(card);
+      if (!cardBreaksRingRule && !trickIsPoisonous) {
+        winningChoices.push(card);
+      }
       losingChoices.push(card);
       continue;
     }
     const simulated = [...state.currentTrick, { seatIndex, card }];
-    if (evaluateTrickWinner(simulated) === seatIndex) {
+    if (evaluateTrickWinner(simulated) === seatIndex && !cardBreaksShadowRule && !cardBreaksRingRule) {
       winningChoices.push(card);
-    } else {
+    } else if (evaluateTrickWinner(simulated) !== seatIndex) {
       losingChoices.push(card);
     }
   }
@@ -226,8 +263,8 @@ export function chooseAiCard(state: GameState, seatIndex: number): AiDecision {
     };
   }
 
-  // Avoid tricks
-  if (desire === 'avoid') {
+  // Avoid tricks (including poisonous tricks containing forbidden suits)
+  if (effectiveDesire === 'avoid') {
     if (losingChoices.length > 0) {
       // Dump highest losing card so we don't accidentally win later tricks!
       const nonOne = losingChoices.filter((c) => c.id !== 'rings-1');
@@ -236,7 +273,9 @@ export function chooseAiCard(state: GameState, seatIndex: number): AiDecision {
       return {
         cardId: dump.id,
         oneRingClaimWin: false,
-        reason: `Xả ${formatCardName(dump)} để giữ 0 trick và loại lá lớn khỏi tay.`,
+        reason: trickIsPoisonous
+          ? `Nhường lượt bằng ${formatCardName(dump)} để tránh lá bài cấm.`
+          : `Xả ${formatCardName(dump)} để giữ mục tiêu số trick.`,
       };
     }
     const smallestWin = [...legal].sort((a, b) => cardPowerScore(a, leadSuit) - cardPowerScore(b, leadSuit))[0];
@@ -248,7 +287,7 @@ export function chooseAiCard(state: GameState, seatIndex: number): AiDecision {
   }
 
   // Rescue teammate or need tricks
-  if ((desire === 'need' || rescueTeammate) && winningChoices.length > 0) {
+  if ((effectiveDesire === 'need' || (rescueTeammate && !trickIsPoisonous)) && winningChoices.length > 0) {
     const nonOne = winningChoices.filter((c) => c.id !== 'rings-1');
     if (nonOne.length > 0) {
       const smartWin = [...nonOne].sort((a, b) => cardPowerScore(a, leadSuit) - cardPowerScore(b, leadSuit))[0];

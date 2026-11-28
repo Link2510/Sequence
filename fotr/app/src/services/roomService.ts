@@ -1,10 +1,40 @@
-import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
+import { Timestamp, deleteDoc, doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 import { RoomSeatInfo, RoomState } from '../game/types';
 import { getFirestoreDb, isFirebaseConfigured } from '../lib/firebaseClient';
 
 export type TransportMode = 'firebase' | 'server' | 'local';
 
 const LOCAL_ROOM_PREFIX = 'lotr_room_';
+const VISITED_ROOMS_KEY = 'lotr_visited_rooms';
+
+/** Nhớ các phòng đã ghé để dọn dẹp khi người dùng quay lại app. */
+function rememberRoom(code: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const raw = window.localStorage.getItem(VISITED_ROOMS_KEY);
+    const list: string[] = raw ? (JSON.parse(raw) as string[]) : [];
+    const next = [code, ...list.filter((c) => c !== code)].slice(0, 30);
+    window.localStorage.setItem(VISITED_ROOMS_KEY, JSON.stringify(next));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+/** Dọn các phòng đã quá hạn trong danh sách phòng từng ghé. */
+export async function cleanupExpiredVisitedRooms(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  let list: string[] = [];
+  try {
+    const raw = window.localStorage.getItem(VISITED_ROOMS_KEY);
+    list = raw ? (JSON.parse(raw) as string[]) : [];
+  } catch {
+    return;
+  }
+  await Promise.all(list.map((code) => fetchRoom(code).catch(() => null)));
+}
+
+/** Phòng không có hoạt động (không ghi state) trong 60 phút sẽ hết hạn. */
+const ROOM_TTL_MS = 60 * 60 * 1000;
 
 /** Firestore rejects `undefined` field values; drop them before writing a room. */
 function stripUndefined<T>(value: T): T {
@@ -19,6 +49,23 @@ function stripUndefined<T>(value: T): T {
     return out as T;
   }
   return value;
+}
+
+/** Mọi lần ghi phòng đều gia hạn TTL thêm 60 phút (Firestore TTL xoá sau đó). */
+function roomForWrite(room: RoomState) {
+  return {
+    ...stripUndefined(room),
+    expiresAt: Timestamp.fromMillis(Date.now() + ROOM_TTL_MS),
+  };
+}
+
+function isRoomExpired(room: RoomState): boolean {
+  const exp = (room as RoomState & { expiresAt?: { toMillis?: () => number } }).expiresAt;
+  const expiryMs =
+    typeof exp?.toMillis === 'function'
+      ? exp.toMillis()
+      : room.updatedAt + ROOM_TTL_MS; // phòng cũ chưa có expiresAt
+  return Date.now() > expiryMs;
 }
 
 export function getLocalPlayerIdentity(): { playerId: string; playerName: string } {
@@ -116,7 +163,8 @@ export async function createRoom(
   if (mode === 'firebase') {
     const db = getFirestoreDb();
     if (!db) throw new Error('Chưa cấu hình Firestore');
-    await setDoc(doc(db, 'rooms', code), stripUndefined(room));
+    await setDoc(doc(db, 'rooms', code), roomForWrite(room));
+    rememberRoom(code);
     return { room, mode };
   }
 
@@ -144,8 +192,21 @@ export async function fetchRoom(
   if (mode === 'firebase') {
     const db = getFirestoreDb();
     if (!db) return { room: null, mode };
-    const snap = await getDoc(doc(db, 'rooms', code));
-    return { room: snap.exists() ? (snap.data() as RoomState) : null, mode };
+    const ref = doc(db, 'rooms', code);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return { room: null, mode };
+    const room = snap.data() as RoomState;
+    if (isRoomExpired(room)) {
+      // Quá 60 phút không hoạt động: coi như phòng đã đóng và dọn luôn.
+      try {
+        await deleteDoc(ref);
+      } catch {
+        // Rules có thể chặn nếu phòng vừa được cập nhật lại; bỏ qua.
+      }
+      return { room: null, mode };
+    }
+    rememberRoom(code);
+    return { room, mode };
   }
 
   if (mode === 'server') {
@@ -166,7 +227,7 @@ export async function updateRoom(room: RoomState): Promise<void> {
   if (mode === 'firebase') {
     const db = getFirestoreDb();
     if (!db) return;
-    await setDoc(doc(db, 'rooms', nextRoom.code), stripUndefined(nextRoom));
+    await setDoc(doc(db, 'rooms', nextRoom.code), roomForWrite(nextRoom));
     return;
   }
 

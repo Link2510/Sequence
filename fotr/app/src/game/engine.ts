@@ -252,11 +252,13 @@ export function performExchange(state: GameState, seatIndex: number, cardId: str
   newSeats[seatIndex].hand = sortHand(newSeats[seatIndex].hand.filter((c) => c.id !== cardId));
 
   let newLostCard = state.lostCard;
+  let newLostRevealed = state.lostCardRevealedToSeat;
   const newLog = [...state.actionLog];
   const passedLog = [...state.passedCardLog];
 
   if (task.toSeat === -1) {
     newLostCard = chosen;
+    newLostRevealed = seatIndex;
     newLog.push(`${newSeats[seatIndex].name} đã đặt 1 lá bài làm Lá Thất Lạc mới.`);
     passedLog.push(`${newSeats[seatIndex].name} -> Lá Thất Lạc`);
   } else {
@@ -275,6 +277,7 @@ export function performExchange(state: GameState, seatIndex: number, cardId: str
       ...state,
       seats: newSeats,
       lostCard: newLostCard,
+      lostCardRevealedToSeat: newLostRevealed,
       exchangeQueue: newQueue,
       currentTurnSeat: nextTask.fromSeat,
       passedCardLog: passedLog,
@@ -288,6 +291,7 @@ export function performExchange(state: GameState, seatIndex: number, cardId: str
     phase: 'PLAYING',
     seats: newSeats,
     lostCard: newLostCard,
+    lostCardRevealedToSeat: newLostRevealed,
     exchangeQueue: newQueue,
     currentTurnSeat: state.leadSeat,
     passedCardLog: passedLog,
@@ -470,8 +474,19 @@ export function evaluatePlayerGoal(seat: PlayerSeat, state: GameState): GoalEval
     progressText: `Trick: ${tricksWon}/${min}+`,
   });
 
+  const ringsInOtherWonCards = state.seats
+    .filter((s) => s.seatIndex !== seat.seatIndex)
+    .reduce((acc, s) => acc + s.wonCards.filter((c) => c.suit === 'rings').length, 0);
+  const lostRingCount = state.lostCard.suit === 'rings' ? 1 : 0;
+  const maxPossibleRings = 5 - lostRingCount - ringsInOtherWonCards;
+
   const minRings = (min: number): GoalEvaluation => ({
-    status: ringsWon >= min ? 'met' : !isFinal ? 'on_track' : 'failed',
+    status:
+      ringsWon >= min
+        ? 'met'
+        : !isFinal && maxPossibleRings >= min
+        ? 'on_track'
+        : 'failed',
     progressText: `Lá Nhẫn: ${ringsWon}/${min}`,
   });
 
@@ -483,7 +498,7 @@ export function evaluatePlayerGoal(seat: PlayerSeat, state: GameState): GoalEval
       return { status: 'met', progressText: `Lá Nhẫn: ${target}/${target}` };
     }
     return {
-      status: !isFinal ? 'on_track' : 'failed',
+      status: !isFinal && maxPossibleRings >= target ? 'on_track' : 'failed',
       progressText: `Lá Nhẫn: ${ringsWon}/${target}`,
     };
   };
@@ -538,8 +553,14 @@ export function evaluatePlayerGoal(seat: PlayerSeat, state: GameState): GoalEval
     case '3:merry': {
       const frodo = state.seats.find((s) => s.characterId === 'frodo');
       const frodoTricks = frodo ? frodo.wonTricks.length : 0;
+      const canStillBeat = tricksWon < frodoTricks + remainingTricks && tricksWon + remainingTricks >= 1;
       return {
-        status: tricksWon >= 1 && tricksWon < frodoTricks ? 'met' : !isFinal ? 'on_track' : 'failed',
+        status:
+          tricksWon >= 1 && tricksWon < frodoTricks
+            ? 'met'
+            : !isFinal && canStillBeat
+            ? 'on_track'
+            : 'failed',
         progressText: `Merry: ${tricksWon} · Frodo: ${frodoTricks}`,
       };
     }
@@ -614,7 +635,12 @@ export function evaluatePlayerGoal(seat: PlayerSeat, state: GameState): GoalEval
       const frodo = state.seats.find((s) => s.characterId === 'frodo');
       const frodoTricks = frodo ? frodo.wonTricks.length : 0;
       return {
-        status: tricksWon >= frodoTricks ? 'met' : !isFinal ? 'on_track' : 'failed',
+        status:
+          tricksWon >= frodoTricks
+            ? 'met'
+            : !isFinal && tricksWon + remainingTricks >= frodoTricks
+            ? 'on_track'
+            : 'failed',
         progressText: `Sam: ${tricksWon} · Frodo: ${frodoTricks}`,
       };
     }
@@ -682,7 +708,12 @@ export function evaluatePlayerGoal(seat: PlayerSeat, state: GameState): GoalEval
     case '11:boromir': {
       const maxOther = othersMaxTricks();
       return {
-        status: tricksWon > maxOther && ringsWon >= 1 ? 'met' : !isFinal ? 'on_track' : 'failed',
+        status:
+          tricksWon > maxOther && ringsWon >= 1
+            ? 'met'
+            : !isFinal && tricksWon + remainingTricks > maxOther && maxPossibleRings >= 1
+            ? 'on_track'
+            : 'failed',
         progressText: `Trick: ${tricksWon} (Khác: ${maxOther}) · Nhẫn: ${ringsWon}/1`,
       };
     }
@@ -821,7 +852,12 @@ export function evaluatePlayerGoal(seat: PlayerSeat, state: GameState): GoalEval
       if (ringsWon > 0) return { status: 'failed', progressText: `Trick: ${tricksWon} · Nhẫn: ${ringsWon}/0` };
       const maxOther = othersMaxTricks();
       return {
-        status: tricksWon > maxOther ? 'met' : !isFinal ? 'on_track' : 'failed',
+        status:
+          tricksWon > maxOther
+            ? 'met'
+            : !isFinal && tricksWon + remainingTricks > maxOther
+            ? 'on_track'
+            : 'failed',
         progressText: `Trick: ${tricksWon} (Khác: ${maxOther}) · Nhẫn: 0/0`,
       };
     }

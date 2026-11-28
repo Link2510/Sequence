@@ -49,10 +49,14 @@ export const MultiplayerView: React.FC<MultiplayerViewProps> = ({
     resolveTransportMode().then(setTransportMode);
   }, []);
 
+  const joinedInitialRef = React.useRef<string | null>(null);
+
   // Auto-join if URL has ?room=...
   useEffect(() => {
     if (!initialRoomCode) return;
     const code = initialRoomCode.trim().toUpperCase();
+    if (joinedInitialRef.current === code) return;
+    joinedInitialRef.current = code;
     setLoading(true);
     setErrorMsg(null);
     joinRoomSeat(code, identity.playerId, identity.playerName)

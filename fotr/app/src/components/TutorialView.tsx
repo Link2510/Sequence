@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, Compass, Info, Sparkles, XCircle } from 'lucide-react';
-import { CHAPTERS, SUIT_META } from '../game/chapters';
+import { CHAPTERS, CHARACTERS, SUIT_META } from '../game/chapters';
 import { Card, Suit } from '../game/types';
 import { CharacterPortrait } from './CharacterPortrait';
 import { PlayingCard, SuitEmblem } from './PlayingCard';
@@ -298,8 +298,8 @@ export const TutorialView: React.FC<TutorialViewProps> = ({
                   <div className="flex items-center gap-3">
                     <CharacterPortrait characterId={rule.characterId} size="sm" />
                     <div>
-                      <div className="text-sm font-bold text-[#F5EEDB] capitalize">
-                        {rule.characterId}
+                      <div className="text-sm font-bold text-[#F5EEDB]">
+                        {CHARACTERS[rule.characterId].name}
                       </div>
                       <div className="text-xs text-[#D6B46A]">{rule.goalLabel}</div>
                     </div>

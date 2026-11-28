@@ -4,6 +4,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Phòng chơi The Fellowship of the Ring: Trick-Taking Game.
     // Mã phòng dạng RING-XXXXX; mỗi phòng tối đa 4 ghế.
+    // expiresAt là TTL: mỗi lần ghi phòng đều gia hạn thêm 60 phút.
     match /rooms/{roomCode} {
       allow get: if roomCode.matches('^[A-Z0-9\\-]{4,16}$');
       allow list: if false;
@@ -14,7 +15,8 @@ service cloud.firestore {
                     && request.resource.data.status in ['LOBBY', 'IN_GAME']
                     && request.resource.data.seats is list
                     && request.resource.data.seats.size() == 4
-                    && request.resource.data.updatedAt is number;
+                    && request.resource.data.updatedAt is number
+                    && request.resource.data.expiresAt is timestamp;
 
       allow update: if roomCode.matches('^[A-Z0-9\\-]{4,16}$')
                     && request.resource.data.code == resource.data.code
@@ -22,9 +24,12 @@ service cloud.firestore {
                     && request.resource.data.status in ['LOBBY', 'IN_GAME']
                     && request.resource.data.seats is list
                     && request.resource.data.seats.size() == 4
-                    && request.resource.data.updatedAt is number;
+                    && request.resource.data.updatedAt is number
+                    && request.resource.data.expiresAt is timestamp;
 
-      allow delete: if false;
+      // Client dọn phòng đã quá hạn;Firestore TTL (khi có billing) cũng xoá tự động.
+      allow delete: if resource.data.expiresAt is timestamp
+                    && request.time > resource.data.expiresAt;
     }
 
     match /{document=**} {
