@@ -11,7 +11,12 @@ import {
 import { COLOR_GROUP_META, RESORT_RENTS } from '../data/boardData';
 import { PLAYER_COLORS } from '../data/characters';
 import { BoardTile as BoardTileType, Player, PropertyState } from '../types/game';
-import { calculateRent, formatMoney } from '../utils/gameLogic';
+import {
+  calculateRent,
+  formatMoney,
+  getPlayerResortCount,
+  playerHasMonopoly,
+} from '../utils/gameLogic';
 import { BuildingVisual } from './BuildingVisual';
 
 interface BoardTileProps {
@@ -38,6 +43,13 @@ export const BoardTile: React.FC<BoardTileProps> = ({
   const ownerColor = owner ? PLAYER_COLORS[owner.color] : null;
   const groupMeta = tile.group ? COLOR_GROUP_META[tile.group] : null;
   const currentRent = prop ? calculateRent(tile, ownership) : null;
+  const ownerHasMono =
+    prop && tile.group
+      ? playerHasMonopoly(prop.ownerId, tile.group, ownership)
+      : false;
+  const ownerResortCount = prop
+    ? getPlayerResortCount(prop.ownerId, ownership)
+    : 0;
 
   const playersHere = players.filter((p) => !p.bankrupt && p.position === tile.id);
   const isInteractiveTarget = selectableForFestival || selectableForWorldTour;
@@ -331,21 +343,31 @@ export const BoardTile: React.FC<BoardTileProps> = ({
                 '2 Nhà',
                 '3 Nhà',
                 'Khách Sạn 5★',
-              ].map((label, idx) => (
-                <div
-                  key={label}
-                  className={`flex justify-between px-1.5 py-0.5 rounded ${
-                    prop?.level === idx
-                      ? 'bg-amber-500/20 text-amber-300 font-semibold'
-                      : 'text-slate-300'
-                  }`}
-                >
-                  <span>{label}</span>
-                  <span className="font-mono-num">
-                    {formatMoney(tile.rents![idx])}
-                  </span>
-                </div>
-              ))}
+              ].map((label, idx) => {
+                const isCurrent = prop?.level === idx;
+                const tierRent =
+                  idx === 0 && ownerHasMono
+                    ? tile.rents![idx] * 2
+                    : tile.rents![idx];
+                return (
+                  <div
+                    key={label}
+                    className={`flex justify-between px-1.5 py-0.5 rounded ${
+                      isCurrent
+                        ? 'bg-amber-500/20 text-amber-300 font-semibold'
+                        : 'text-slate-300'
+                    }`}
+                  >
+                    <span>
+                      {label}
+                      {idx === 0 && ownerHasMono ? ' (x2)' : ''}
+                    </span>
+                    <span className="font-mono-num">
+                      {formatMoney(tierRent)}
+                    </span>
+                  </div>
+                );
+              })}
               {tile.houseCost && (
                 <div className="flex justify-between px-1.5 pt-1 border-t border-white/10 text-slate-400">
                   <span>Phí xây mỗi cấp</span>
@@ -359,14 +381,24 @@ export const BoardTile: React.FC<BoardTileProps> = ({
 
           {tile.type === 'RESORT' && (
             <div className="mt-2.5 pt-2 border-t border-white/10 space-y-1 text-[11px]">
-              {RESORT_RENTS.map((rent, idx) => (
-                <div key={idx} className="flex justify-between text-slate-300">
-                  <span>Sở hữu {idx + 1} khu</span>
-                  <span className="font-mono-num text-cyan-300 font-semibold">
-                    {formatMoney(rent)}
-                  </span>
-                </div>
-              ))}
+              {RESORT_RENTS.map((rent, idx) => {
+                const isCurrent = Boolean(prop) && ownerResortCount === idx + 1;
+                return (
+                  <div
+                    key={idx}
+                    className={`flex justify-between px-1.5 py-0.5 rounded ${
+                      isCurrent
+                        ? 'bg-amber-500/20 text-amber-300 font-semibold'
+                        : 'text-slate-300'
+                    }`}
+                  >
+                    <span>Sở hữu {idx + 1} khu</span>
+                    <span className="font-mono-num text-cyan-300 font-semibold">
+                      {formatMoney(rent)}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -384,7 +416,7 @@ export const BoardTile: React.FC<BoardTileProps> = ({
                 'Rút ngẫu nhiên 1 Thẻ Cơ Hội mang lại thưởng, phạt hoặc sự kiện bất ngờ.'}
               {tile.type === 'TAX' &&
                 (tile.taxPercent
-                  ? `Đóng thuế thu nhập bằng ${tile.taxPercent}% tiền mặt hiện có.`
+                  ? `Đóng thuế thu nhập bằng ${tile.taxPercent}% tiền mặt hiện có (tối thiểu 200K).`
                   : `Đóng thuế cố định ${formatMoney(tile.taxAmount ?? 0)}.`)}
             </p>
           )}

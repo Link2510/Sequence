@@ -8,6 +8,9 @@ interface GameOverModalProps {
   summary: VictorySummary;
   players: Player[];
   ownership: Record<number, PropertyState>;
+  canPlayAgain?: boolean;
+  playAgainLabel?: string;
+  backLabel?: string;
   onPlayAgain: () => void;
   onBackToLobby: () => void;
 }
@@ -16,6 +19,9 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   summary,
   players,
   ownership,
+  canPlayAgain = true,
+  playAgainLabel = 'Chơi Lại',
+  backLabel = 'Đổi Nhân Vật',
   onPlayAgain,
   onBackToLobby,
 }) => {
@@ -105,15 +111,21 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             onClick={onBackToLobby}
             className="flex-1 py-3 px-4 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-sm cursor-pointer whitespace-nowrap"
           >
-            Đổi Nhân Vật
+            {backLabel}
           </button>
-          <button
-            onClick={onPlayAgain}
-            className="flex-1 py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Chơi Lại
-          </button>
+          {canPlayAgain ? (
+            <button
+              onClick={onPlayAgain}
+              className="flex-1 py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
+            >
+              <RotateCcw className="w-4 h-4" />
+              {playAgainLabel}
+            </button>
+          ) : (
+            <div className="flex-1 py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-amber-300 whitespace-nowrap">
+              Đang chờ chủ phòng chơi lại...
+            </div>
+          )}
         </div>
       </div>
     </div>

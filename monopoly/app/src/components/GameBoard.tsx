@@ -49,7 +49,7 @@ const DiceCube: React.FC<{ value: number; rolling: boolean }> = ({
 
   return (
     <div
-      className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white border-2 border-slate-800 ring-2 ring-white/70 shadow-lg p-2 grid grid-cols-3 grid-rows-3 place-items-center ${
+      className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white border-2 border-slate-200 shadow-lg p-2 grid grid-cols-3 grid-rows-3 place-items-center ${
         rolling ? 'animate-dice-shake' : ''
       }`}
     >

@@ -162,17 +162,31 @@ export default function App() {
     | null
   >(null);
 
-  // Latest state refs for safe async operations
+  // Latest state refs for safe async & synchronous race-free operations
   const playersRef = useRef(players);
   playersRef.current = players;
   const ownershipRef = useRef(ownership);
   ownershipRef.current = ownership;
   const currentIdxRef = useRef(currentPlayerIndex);
   currentIdxRef.current = currentPlayerIndex;
+  const turnStepRef = useRef(turnStep);
+  turnStepRef.current = turnStep;
+  const pendingModalRef = useRef(pendingModal);
+  pendingModalRef.current = pendingModal;
   const fastModeRef = useRef(fastMode);
   fastModeRef.current = fastMode;
   const onlineRoomRef = useRef(onlineRoom);
   onlineRoomRef.current = onlineRoom;
+
+  const commitTurnStep = useCallback((next: TurnStep) => {
+    turnStepRef.current = next;
+    setTurnStep(next);
+  }, []);
+
+  const commitPendingModal = useCallback((next: PendingModal) => {
+    pendingModalRef.current = next;
+    setPendingModal(next);
+  }, []);
 
   const commitPlayers = useCallback(
     (updater: Player[] | ((prev: Player[]) => Player[])): Player[] => {
@@ -510,11 +524,11 @@ export default function App() {
       commitOwnership({});
       currentIdxRef.current = 0;
       setCurrentPlayerIndex(0);
-      setTurnStep('WAIT_ROLL');
+      commitTurnStep('WAIT_ROLL');
       setDice([1, 6]);
       setIsRolling(false);
       setMovingPlayerId(null);
-      setPendingModal(null);
+      commitPendingModal(null);
       setInspectedTile(null);
       setVictory(null);
       setMoneyTransfers([]);
@@ -529,7 +543,7 @@ export default function App() {
       ]);
       setPhase('PLAYING');
     },
-    [commitOwnership, commitPlayers]
+    [commitOwnership, commitPendingModal, commitPlayers, commitTurnStep]
   );
 
   const evaluateVictory = useCallback(
@@ -538,14 +552,14 @@ export default function App() {
       if (summary) {
         sfx.victory();
         setVictory(summary);
-        setTurnStep('GAME_END');
-        setPendingModal(null);
+        commitTurnStep('GAME_END');
+        commitPendingModal(null);
         setPhase('GAME_OVER');
         return true;
       }
       return false;
     },
-    []
+    [commitPendingModal, commitTurnStep]
   );
 
   const advanceTurn = useCallback(
@@ -569,11 +583,20 @@ export default function App() {
       ) {
         extraTurnRef.current = false;
         addLog(`${curPlayer.name} được tung thêm lượt nhờ ra Đôi!`, 'good');
-        setTurnStep('WAIT_ROLL');
+        commitTurnStep('WAIT_ROLL');
         return;
       }
 
       extraTurnRef.current = false;
+      // Clear outgoing player's doublesStreak so it never leaks into a future round (e.g., after World Tour flight)
+      if (curPlayer && curPlayer.doublesStreak !== 0) {
+        commitPlayers(
+          pList.map((p) =>
+            p.id === curPlayer.id ? { ...p, doublesStreak: 0 } : p
+          )
+        );
+      }
+
       let nextIdx = (curIdx + 1) % pList.length;
       let guard = 0;
       while (pList[nextIdx]?.bankrupt && guard < pList.length) {
@@ -583,22 +606,30 @@ export default function App() {
 
       currentIdxRef.current = nextIdx;
       setCurrentPlayerIndex(nextIdx);
-      setTurnStep('WAIT_ROLL');
+      commitTurnStep('WAIT_ROLL');
     },
-    [addLog, evaluateVictory]
+    [addLog, commitPlayers, commitTurnStep, evaluateVictory]
   );
 
   const eliminatePlayer = useCallback(
     (playerId: number, creditorId: number | null, reason: string) => {
       sfx.alert();
+      const victim = playersRef.current.find((p) => p.id === playerId);
+      const transferCash = Math.max(0, victim?.cash ?? 0);
+
       const nextPlayers = playersRef.current.map((p) => {
         if (p.id === playerId) {
-          return { ...p, cash: 0, bankrupt: true, inJail: false };
+          return {
+            ...p,
+            cash: 0,
+            bankrupt: true,
+            inJail: false,
+            worldTourReady: false,
+            doublesStreak: 0,
+          };
         }
         if (creditorId !== null && p.id === creditorId) {
-          const bankruptCash =
-            playersRef.current.find((bp) => bp.id === playerId)?.cash ?? 0;
-          return { ...p, cash: p.cash + Math.max(0, bankruptCash) };
+          return { ...p, cash: p.cash + transferCash };
         }
         return p;
       });
@@ -610,7 +641,15 @@ export default function App() {
         }
       }
 
-      const victim = playersRef.current.find((p) => p.id === playerId);
+      if (creditorId !== null && transferCash > 0) {
+        emitMoneyTransfer(
+          playerId,
+          creditorId,
+          transferCash,
+          `Tài sản thanh lý (${reason})`
+        );
+      }
+
       addLog(
         `${victim?.name ?? 'Người chơi'} đã phá sản (${reason})! Toàn bộ tài sản được thu hồi.`,
         'bad'
@@ -620,13 +659,21 @@ export default function App() {
       pendingAfterPaidRef.current = null;
       commitPlayers(nextPlayers);
       commitOwnership(nextOwnership);
-      setPendingModal(null);
+      commitPendingModal(null);
 
       if (!evaluateVictory(nextPlayers, nextOwnership)) {
         advanceTurn(nextPlayers, nextOwnership);
       }
     },
-    [addLog, advanceTurn, commitOwnership, commitPlayers, evaluateVictory]
+    [
+      addLog,
+      advanceTurn,
+      commitOwnership,
+      commitPendingModal,
+      commitPlayers,
+      emitMoneyTransfer,
+      evaluateVictory,
+    ]
   );
 
   const chargePlayer = useCallback(
@@ -730,7 +777,7 @@ export default function App() {
       }
 
       pendingAfterPaidRef.current = afterPaid ?? null;
-      setPendingModal({
+      commitPendingModal({
         type: 'LIQUIDATE',
         amountOwed: amount,
         creditorId,
@@ -741,6 +788,7 @@ export default function App() {
       addLog,
       advanceTurn,
       commitOwnership,
+      commitPendingModal,
       commitPlayers,
       eliminatePlayer,
       emitMoneyTransfer,
@@ -756,7 +804,7 @@ export default function App() {
     ): Promise<number> => {
       const mySession = sessionRef.current;
       const delay = fastModeRef.current ? 75 : 140;
-      setTurnStep('MOVING');
+      commitTurnStep('MOVING');
       setMovingPlayerId(playerId);
 
       let pos = playersRef.current.find((p) => p.id === playerId)?.position ?? 0;
@@ -805,7 +853,7 @@ export default function App() {
   const resolveTileLanding = useCallback(
     async (playerId: number, tileId: number) => {
       const mySession = sessionRef.current;
-      setTurnStep('RESOLVING');
+      commitTurnStep('RESOLVING');
 
       const tile = getTileById(tileId);
       const actor = playersRef.current.find((p) => p.id === playerId);
@@ -829,7 +877,13 @@ export default function App() {
         const nextPlayers = commitPlayers(
           playersRef.current.map((p) =>
             p.id === playerId
-              ? { ...p, inJail: true, jailTurns: 0, doublesStreak: 0 }
+              ? {
+                  ...p,
+                  inJail: true,
+                  jailTurns: 0,
+                  doublesStreak: 0,
+                  worldTourReady: false,
+                }
               : p
           )
         );
@@ -903,7 +957,7 @@ export default function App() {
         }
 
         // Human chooses tile on board
-        setTurnStep('SELECT_FESTIVAL');
+        commitTurnStep('SELECT_FESTIVAL');
         return;
       }
 
@@ -933,7 +987,7 @@ export default function App() {
           if (sessionRef.current !== mySession) return;
           await applyChanceCard(playerId, card);
         } else {
-          setPendingModal({ type: 'CHANCE_CARD', card });
+          commitPendingModal({ type: 'CHANCE_CARD', card });
         }
         return;
       }
@@ -991,7 +1045,7 @@ export default function App() {
         }
 
         // Human modal
-        setPendingModal({ type: 'BUY_PROPERTY', tileId: tile.id });
+        commitPendingModal({ type: 'BUY_PROPERTY', tileId: tile.id });
         return;
       }
 
@@ -1035,7 +1089,7 @@ export default function App() {
           return;
         }
 
-        setPendingModal({ type: 'UPGRADE_PROPERTY', tileId: tile.id });
+        commitPendingModal({ type: 'UPGRADE_PROPERTY', tileId: tile.id });
         return;
       }
 
@@ -1057,18 +1111,21 @@ export default function App() {
         `Tiền thuê ${tile.name}`,
         async (afterPlayers, afterOwnership) => {
           const payerAfter = afterPlayers.find((p) => p.id === playerId);
+          const latestProp = afterOwnership[tile.id];
           const canBuyout =
             payerAfter &&
             !payerAfter.bankrupt &&
+            latestProp &&
+            latestProp.ownerId !== playerId &&
             tile.type === 'PROPERTY' &&
-            prop.level < 4;
+            latestProp.level < 4;
 
           if (!canBuyout) {
             advanceTurn(afterPlayers, afterOwnership);
             return;
           }
 
-          const buyoutPrice = calculateBuyoutPrice(tile, prop);
+          const buyoutPrice = calculateBuyoutPrice(tile, latestProp);
           if (payerAfter.cash < buyoutPrice) {
             advanceTurn(afterPlayers, afterOwnership);
             return;
@@ -1081,19 +1138,19 @@ export default function App() {
               sfx.buy();
               const boughtPlayers = afterPlayers.map((p) => {
                 if (p.id === playerId) return { ...p, cash: p.cash - buyoutPrice };
-                if (p.id === prop.ownerId)
+                if (p.id === latestProp.ownerId)
                   return { ...p, cash: p.cash + buyoutPrice };
                 return p;
               });
               const boughtOwnership = {
                 ...afterOwnership,
-                [tile.id]: { ...prop, ownerId: playerId },
+                [tile.id]: { ...latestProp, ownerId: playerId },
               };
               commitPlayers(boughtPlayers);
               commitOwnership(boughtOwnership);
               emitMoneyTransfer(
                 playerId,
-                prop.ownerId,
+                latestProp.ownerId,
                 buyoutPrice,
                 `Thâu tóm ${tile.name}`
               );
@@ -1109,7 +1166,7 @@ export default function App() {
           }
 
           // Human buyout prompt
-          setPendingModal({
+          commitPendingModal({
             type: 'BUYOUT_PROPERTY',
             tileId: tile.id,
             buyoutPrice,
@@ -1164,7 +1221,14 @@ export default function App() {
           const nextPlayers = commitPlayers(
             playersRef.current.map((p) =>
               p.id === playerId
-                ? { ...p, position: 8, inJail: true, jailTurns: 0, doublesStreak: 0 }
+                ? {
+                    ...p,
+                    position: 8,
+                    inJail: true,
+                    jailTurns: 0,
+                    doublesStreak: 0,
+                    worldTourReady: false,
+                  }
                 : p
             )
           );
@@ -1253,7 +1317,7 @@ export default function App() {
       // World Tour ready -> jump to tile selection
       if (actor.worldTourReady && !isJailEscapeAttempt) {
         if (actor.isAI) {
-          setTurnStep('RESOLVING');
+          commitTurnStep('RESOLVING');
           await sleep(fastModeRef.current ? 300 : 600);
           if (sessionRef.current !== mySession) return;
           const destId = chooseAIWorldTourTile(actor, ownershipRef.current);
@@ -1272,12 +1336,12 @@ export default function App() {
           if (sessionRef.current !== mySession) return;
           await resolveTileLanding(actor.id, landed);
         } else {
-          setTurnStep('SELECT_WORLD_TOUR');
+          commitTurnStep('SELECT_WORLD_TOUR');
         }
         return;
       }
 
-      setTurnStep('ROLLING');
+      commitTurnStep('ROLLING');
       setIsRolling(true);
       sfx.diceRoll();
 
@@ -1371,7 +1435,14 @@ export default function App() {
           const nextPlayers = commitPlayers(
             playersRef.current.map((p) =>
               p.id === actor.id
-                ? { ...p, position: 8, inJail: true, jailTurns: 0, doublesStreak: 0 }
+                ? {
+                    ...p,
+                    position: 8,
+                    inJail: true,
+                    jailTurns: 0,
+                    doublesStreak: 0,
+                    worldTourReady: false,
+                  }
                 : p
             )
           );
@@ -1416,19 +1487,19 @@ export default function App() {
     ]
   );
 
-  // Trigger Human Roll or Jail Options
+  // Trigger Human Roll or Jail Options (synchronous ref guard against double-clicks)
   const handleHumanRollClick = useCallback(() => {
-    if (turnStep !== 'WAIT_ROLL' || pendingModal) return;
+    if (turnStepRef.current !== 'WAIT_ROLL' || pendingModalRef.current) return;
     const actor = playersRef.current[currentIdxRef.current];
     if (!actor || actor.isAI || actor.bankrupt) return;
 
     if (actor.inJail) {
-      setPendingModal({ type: 'JAIL_OPTIONS' });
+      commitPendingModal({ type: 'JAIL_OPTIONS' });
       return;
     }
 
     executeDiceRoll(false);
-  }, [executeDiceRoll, pendingModal, turnStep]);
+  }, [commitPendingModal, executeDiceRoll]);
 
   // AI Turn Driver
   useEffect(() => {
@@ -1440,7 +1511,13 @@ export default function App() {
     const delay = fastMode ? 320 : 700;
 
     const timer = setTimeout(() => {
-      if (sessionRef.current !== mySession) return;
+      if (
+        sessionRef.current !== mySession ||
+        turnStepRef.current !== 'WAIT_ROLL' ||
+        pendingModalRef.current
+      ) {
+        return;
+      }
 
       if (actor.inJail) {
         if (actor.escapeCards > 0) {
@@ -1553,17 +1630,18 @@ export default function App() {
 
   // Board Tile Click (Festival / World Tour selection)
   const handleTileClick = async (tile: BoardTile) => {
-    const actor = players[currentPlayerIndex];
+    const actor = playersRef.current[currentIdxRef.current];
     if (!actor || actor.isAI) {
       return;
     }
 
-    if (turnStep === 'SELECT_FESTIVAL') {
-      const prop = ownership[tile.id];
+    if (turnStepRef.current === 'SELECT_FESTIVAL') {
+      const prop = ownershipRef.current[tile.id];
       if (!prop || prop.ownerId !== actor.id) return;
 
+      commitTurnStep('RESOLVING');
       sfx.buy();
-      const nextOwnership = { ...ownership };
+      const nextOwnership = { ...ownershipRef.current };
       for (const [k, v] of Object.entries(nextOwnership)) {
         if (v.ownerId === actor.id && v.hasFestival) {
           nextOwnership[Number(k)] = { ...v, hasFestival: false };
@@ -1579,11 +1657,13 @@ export default function App() {
       return;
     }
 
-    if (turnStep === 'SELECT_WORLD_TOUR') {
+    if (turnStepRef.current === 'SELECT_WORLD_TOUR') {
       if (tile.id === 24) return;
+      const mySession = sessionRef.current;
+      commitTurnStep('MOVING');
       sfx.cashIn();
       commitPlayers(
-        players.map((p) =>
+        playersRef.current.map((p) =>
           p.id === actor.id ? { ...p, worldTourReady: false } : p
         )
       );
@@ -1592,6 +1672,7 @@ export default function App() {
       const total = BOARD_TILES.length;
       const steps = (tile.id - actor.position + total) % total || total;
       const landed = await movePlayerSteps(actor.id, steps, true);
+      if (sessionRef.current !== mySession) return;
       await resolveTileLanding(actor.id, landed);
       return;
     }
@@ -1601,30 +1682,32 @@ export default function App() {
   const currentPlayer = players[currentPlayerIndex];
 
   const handleBuyProperty = (tileId: number, targetLevel: 0 | 1 | 2 | 3) => {
-    if (!currentPlayer) return;
+    const actor = playersRef.current[currentIdxRef.current];
+    if (!actor || pendingModalRef.current?.type !== 'BUY_PROPERTY') return;
+    if (ownershipRef.current[tileId]) return;
     const tile = getTileById(tileId);
     const effectiveLevel = tile.type === 'RESORT' ? 0 : targetLevel;
     const cost = (tile.price ?? 0) + effectiveLevel * (tile.houseCost ?? 0);
-    if (currentPlayer.cash < cost) return;
+    if (actor.cash < cost) return;
 
     sfx.buy();
     const nextPlayers = commitPlayers(
-      players.map((p) =>
-        p.id === currentPlayer.id ? { ...p, cash: p.cash - cost } : p
+      playersRef.current.map((p) =>
+        p.id === actor.id ? { ...p, cash: p.cash - cost } : p
       )
     );
     const nextOwnership = commitOwnership({
-      ...ownership,
+      ...ownershipRef.current,
       [tileId]: {
-        ownerId: currentPlayer.id,
+        ownerId: actor.id,
         level: effectiveLevel,
         hasFestival: false,
       },
     });
-    setPendingModal(null);
-    emitMoneyTransfer(currentPlayer.id, 'BANK', cost, `Mua ${tile.name}`);
+    commitPendingModal(null);
+    emitMoneyTransfer(actor.id, 'BANK', cost, `Mua ${tile.name}`);
     addLog(
-      `${currentPlayer.name} mua ${tile.name}${
+      `${actor.name} mua ${tile.name}${
         effectiveLevel > 0 ? ` (+${effectiveLevel} nhà)` : ''
       } giá ${formatMoney(cost)}.`,
       'good'
@@ -1633,28 +1716,29 @@ export default function App() {
   };
 
   const handleUpgradeProperty = (tileId: number, targetLevel: 1 | 2 | 3 | 4) => {
-    if (!currentPlayer) return;
+    const actor = playersRef.current[currentIdxRef.current];
+    if (!actor || pendingModalRef.current?.type !== 'UPGRADE_PROPERTY') return;
     const tile = getTileById(tileId);
-    const prop = ownership[tileId];
-    if (!prop) return;
+    const prop = ownershipRef.current[tileId];
+    if (!prop || prop.ownerId !== actor.id || targetLevel <= prop.level) return;
 
     const cost = (targetLevel - prop.level) * (tile.houseCost ?? 0);
-    if (currentPlayer.cash < cost) return;
+    if (actor.cash < cost) return;
 
     sfx.buy();
     const nextPlayers = commitPlayers(
-      players.map((p) =>
-        p.id === currentPlayer.id ? { ...p, cash: p.cash - cost } : p
+      playersRef.current.map((p) =>
+        p.id === actor.id ? { ...p, cash: p.cash - cost } : p
       )
     );
     const nextOwnership = commitOwnership({
-      ...ownership,
+      ...ownershipRef.current,
       [tileId]: { ...prop, level: targetLevel },
     });
-    setPendingModal(null);
-    emitMoneyTransfer(currentPlayer.id, 'BANK', cost, `Nâng cấp ${tile.name}`);
+    commitPendingModal(null);
+    emitMoneyTransfer(actor.id, 'BANK', cost, `Nâng cấp ${tile.name}`);
     addLog(
-      `${currentPlayer.name} nâng cấp ${tile.name} lên ${
+      `${actor.name} nâng cấp ${tile.name} lên ${
         targetLevel === 4 ? 'Khách Sạn 5★' : `${targetLevel} nhà`
       }.`,
       'good'
@@ -1663,81 +1747,90 @@ export default function App() {
   };
 
   const handleBuyoutProperty = (tileId: number) => {
-    if (!currentPlayer || pendingModal?.type !== 'BUYOUT_PROPERTY') return;
+    const actor = playersRef.current[currentIdxRef.current];
+    if (!actor || pendingModalRef.current?.type !== 'BUYOUT_PROPERTY') return;
     const tile = getTileById(tileId);
-    const prop = ownership[tileId];
-    const buyoutPrice = pendingModal.buyoutPrice;
-    if (!prop || currentPlayer.cash < buyoutPrice) return;
+    const prop = ownershipRef.current[tileId];
+    const buyoutPrice = pendingModalRef.current.buyoutPrice;
+    if (!prop || actor.cash < buyoutPrice) return;
 
     sfx.buy();
     const nextPlayers = commitPlayers(
-      players.map((p) => {
-        if (p.id === currentPlayer.id) return { ...p, cash: p.cash - buyoutPrice };
+      playersRef.current.map((p) => {
+        if (p.id === actor.id) return { ...p, cash: p.cash - buyoutPrice };
         if (p.id === prop.ownerId) return { ...p, cash: p.cash + buyoutPrice };
         return p;
       })
     );
     const nextOwnership = commitOwnership({
-      ...ownership,
-      [tileId]: { ...prop, ownerId: currentPlayer.id },
+      ...ownershipRef.current,
+      [tileId]: { ...prop, ownerId: actor.id },
     });
-    setPendingModal(null);
+    commitPendingModal(null);
     emitMoneyTransfer(
-      currentPlayer.id,
+      actor.id,
       prop.ownerId,
       buyoutPrice,
       `Thâu tóm ${tile.name}`
     );
     addLog(
-      `${currentPlayer.name} thâu tóm ${tile.name} với giá ${formatMoney(buyoutPrice)}!`,
+      `${actor.name} thâu tóm ${tile.name} với giá ${formatMoney(buyoutPrice)}!`,
       'warn'
     );
     advanceTurn(nextPlayers, nextOwnership);
   };
 
   const handleSkipBuy = () => {
-    setPendingModal(null);
+    if (!pendingModalRef.current) return;
+    commitPendingModal(null);
     advanceTurn();
   };
 
   const handleConfirmChance = () => {
-    if (pendingModal?.type !== 'CHANCE_CARD' || !currentPlayer) return;
-    const card = pendingModal.card;
-    setPendingModal(null);
-    showChanceNotice(currentPlayer.id, card);
-    applyChanceCard(currentPlayer.id, card);
+    const actor = playersRef.current[currentIdxRef.current];
+    if (pendingModalRef.current?.type !== 'CHANCE_CARD' || !actor) return;
+    const card = pendingModalRef.current.card;
+    commitPendingModal(null);
+    showChanceNotice(actor.id, card);
+    applyChanceCard(actor.id, card);
   };
 
   const handleJailPayBail = () => {
-    if (!currentPlayer || currentPlayer.cash < JAIL_BAIL) return;
+    const actor = playersRef.current[currentIdxRef.current];
+    if (
+      !actor ||
+      pendingModalRef.current?.type !== 'JAIL_OPTIONS' ||
+      actor.cash < JAIL_BAIL
+    ) {
+      return;
+    }
     sfx.pay();
     commitPlayers(
-      players.map((p) =>
-        p.id === currentPlayer.id
+      playersRef.current.map((p) =>
+        p.id === actor.id
           ? { ...p, inJail: false, jailTurns: 0, cash: p.cash - JAIL_BAIL }
           : p
       )
     );
-    setPendingModal(null);
-    emitMoneyTransfer(
-      currentPlayer.id,
-      'BANK',
-      JAIL_BAIL,
-      'Phí rời Đảo Hoang'
-    );
-    addLog(
-      `${currentPlayer.name} trả ${formatMoney(JAIL_BAIL)} rời Đảo Hoang.`,
-      'warn'
-    );
+    commitPendingModal(null);
+    emitMoneyTransfer(actor.id, 'BANK', JAIL_BAIL, 'Phí rời Đảo Hoang');
+    addLog(`${actor.name} trả ${formatMoney(JAIL_BAIL)} rời Đảo Hoang.`, 'warn');
     executeDiceRoll(false);
   };
 
   const handleJailUseCard = () => {
-    if (!currentPlayer || currentPlayer.escapeCards <= 0) return;
+    const actor = playersRef.current[currentIdxRef.current];
+    if (
+      !actor ||
+      pendingModalRef.current?.type !== 'JAIL_OPTIONS' ||
+      actor.escapeCards <= 0
+    ) {
+      return;
+    }
     sfx.cashIn();
     commitPlayers(
-      players.map((p) =>
-        p.id === currentPlayer.id
+      playersRef.current.map((p) =>
+        p.id === actor.id
           ? {
               ...p,
               inJail: false,
@@ -1747,61 +1840,59 @@ export default function App() {
           : p
       )
     );
-    setPendingModal(null);
-    addLog(`${currentPlayer.name} dùng Thẻ Thoát Đảo miễn phí.`, 'good');
+    commitPendingModal(null);
+    addLog(`${actor.name} dùng Thẻ Thoát Đảo miễn phí.`, 'good');
     executeDiceRoll(false);
   };
 
   const handleJailRollDoubles = () => {
-    setPendingModal(null);
+    if (pendingModalRef.current?.type !== 'JAIL_OPTIONS') return;
+    commitPendingModal(null);
     executeDiceRoll(true);
   };
 
   const handleSellPropertyForDebt = (tileId: number) => {
-    if (!currentPlayer) return;
-    const prop = ownership[tileId];
-    if (!prop || prop.ownerId !== currentPlayer.id) return;
+    const actor = playersRef.current[currentIdxRef.current];
+    if (!actor || pendingModalRef.current?.type !== 'LIQUIDATE') return;
+    const prop = ownershipRef.current[tileId];
+    if (!prop || prop.ownerId !== actor.id) return;
     const tile = getTileById(tileId);
     const sellValue = calculateSellValue(tile, prop);
 
     sfx.cashIn();
     commitPlayers(
-      players.map((p) =>
-        p.id === currentPlayer.id ? { ...p, cash: p.cash + sellValue } : p
+      playersRef.current.map((p) =>
+        p.id === actor.id ? { ...p, cash: p.cash + sellValue } : p
       )
     );
-    const nextOwnership = { ...ownership };
+    const nextOwnership = { ...ownershipRef.current };
     delete nextOwnership[tileId];
     commitOwnership(nextOwnership);
-    emitMoneyTransfer('BANK', currentPlayer.id, sellValue, `Bán ${tile.name}`);
+    emitMoneyTransfer('BANK', actor.id, sellValue, `Bán ${tile.name}`);
     addLog(
-      `${currentPlayer.name} bán ${tile.name} thu về ${formatMoney(sellValue)}.`,
+      `${actor.name} bán ${tile.name} thu về ${formatMoney(sellValue)}.`,
       'warn'
     );
   };
 
   const handleSettleDebt = () => {
-    if (pendingModal?.type !== 'LIQUIDATE' || !currentPlayer) return;
-    const { amountOwed, creditorId, reason } = pendingModal;
-    if (currentPlayer.cash < amountOwed) return;
+    const actor = playersRef.current[currentIdxRef.current];
+    if (pendingModalRef.current?.type !== 'LIQUIDATE' || !actor) return;
+    const { amountOwed, creditorId, reason } = pendingModalRef.current;
+    if (actor.cash < amountOwed) return;
 
     sfx.pay();
     const nextPlayers = commitPlayers(
-      players.map((p) => {
-        if (p.id === currentPlayer.id) return { ...p, cash: p.cash - amountOwed };
+      playersRef.current.map((p) => {
+        if (p.id === actor.id) return { ...p, cash: p.cash - amountOwed };
         if (creditorId !== null && p.id === creditorId) {
           return { ...p, cash: p.cash + amountOwed };
         }
         return p;
       })
     );
-    setPendingModal(null);
-    emitMoneyTransfer(
-      currentPlayer.id,
-      creditorId ?? 'BANK',
-      amountOwed,
-      reason
-    );
+    commitPendingModal(null);
+    emitMoneyTransfer(actor.id, creditorId ?? 'BANK', amountOwed, reason);
 
     const afterPaid = pendingAfterPaidRef.current;
     pendingAfterPaidRef.current = null;
@@ -1813,11 +1904,12 @@ export default function App() {
   };
 
   const handleDeclareBankruptcy = () => {
-    if (pendingModal?.type !== 'LIQUIDATE' || !currentPlayer) return;
+    const actor = playersRef.current[currentIdxRef.current];
+    if (pendingModalRef.current?.type !== 'LIQUIDATE' || !actor) return;
     eliminatePlayer(
-      currentPlayer.id,
-      pendingModal.creditorId,
-      pendingModal.reason
+      actor.id,
+      pendingModalRef.current.creditorId,
+      pendingModalRef.current.reason
     );
   };
 
@@ -1905,16 +1997,20 @@ export default function App() {
         : p
     );
     const activePlayer = displayPlayers[game.currentPlayerIndex];
+    const isAnimatingOnlineMove =
+      onlineMovingPlayerId !== null ||
+      (game.lastMove !== null && game.lastMove.seq > lastMoveSeqRef.current);
+
     const isMyTurn =
       activePlayer !== undefined &&
       activePlayer.id === myOnlineId &&
       !activePlayer.isAI &&
-      onlineMovingPlayerId === null;
+      !isAnimatingOnlineMove;
 
     const myPendingModal =
       game.pendingModal &&
       game.pendingModal.forPlayerId === myOnlineId &&
-      onlineMovingPlayerId === null
+      !isAnimatingOnlineMove
         ? game.pendingModal.modal
         : null;
 
@@ -1947,7 +2043,7 @@ export default function App() {
                 <Compass className="w-4 h-4" />
               </div>
               <span className="font-display text-base font-bold text-white">
-                Tour Việt Nam
+                Tour Kinh Doanh Việt Nam
               </span>
               <span className="font-mono-num text-xs font-bold text-amber-300 bg-black/35 border border-white/10 px-2.5 py-1 rounded-md">
                 Phòng: {onlineRoom.code}
@@ -2153,6 +2249,9 @@ export default function App() {
             summary={game.victory}
             players={displayPlayers}
             ownership={game.ownership}
+            canPlayAgain={onlineRoom.isHost}
+            playAgainLabel="Chơi Lại Ván Mới"
+            backLabel={onlineRoom.isHost ? 'Về Phòng Chờ' : 'Rời Phòng'}
             onPlayAgain={() => {
               if (onlineRoom.isHost) {
                 sendWsMessage({
@@ -2192,7 +2291,7 @@ export default function App() {
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-display text-lg font-bold text-white">
-                  Hướng Dẫn Nhanh Tour Việt Nam
+                  Hướng Dẫn Nhanh Tour Kinh Doanh
                 </h3>
                 <button
                   onClick={() => setShowRulesModal(false)}
@@ -2209,13 +2308,13 @@ export default function App() {
                   <strong className="text-white">• Mua & Xây nhà:</strong> Khi dừng ở đất trống, bạn có thể mua đất hoặc xây sẵn tới 3 nhà ngay lập tức. Khi dừng lại đất mình, có thể nâng lên Khách Sạn 5★.
                 </li>
                 <li>
-                  <strong className="text-white">• Thâu tóm (Buyout):</strong> Có thể mua lại tỉnh thành của đối thủ với giá x2, trừ khi họ đã nâng lên Khách Sạn 5★.
+                  <strong className="text-white">• Thâu tóm (Buyout):</strong> Có thể mua lại tỉnh thành của đối thủ với giá x2, trừ Khách Sạn 5★ và Khu Nghỉ Dưỡng.
                 </li>
                 <li>
-                  <strong className="text-white">• Lễ Hội & Du Lịch:</strong> Ô Lễ Hội nhân đôi tiền thuê 1 tỉnh của bạn. Ô Du Lịch cho phép bay tới bất kỳ ô nào ở lượt kế tiếp.
+                  <strong className="text-white">• Lễ Hội & Du Lịch:</strong> Ô Lễ Hội nhân đôi tiền thuê 1 tỉnh/khu nghỉ dưỡng của bạn. Ô Du Lịch cho phép bay tới bất kỳ ô nào ở lượt kế tiếp.
                 </li>
                 <li>
-                  <strong className="text-white">• Đảo Hoang:</strong> Tung ra Đôi, nộp 500K hoặc dùng Thẻ Thoát Đảo để rời đảo. Tung Đôi 3 lần liên tiếp cũng bị đưa ra đảo.
+                  <strong className="text-white">• Đảo Hoang:</strong> Tung ra Đôi, nộp 500K hoặc dùng Thẻ Thoát Đảo để rời đảo (tối đa 3 lượt, hết lượt 3 buộc nộp 500K). Tung Đôi 3 lần liên tiếp cũng bị đưa ra đảo.
                 </li>
               </ul>
               <button
@@ -2276,7 +2375,7 @@ export default function App() {
               <Compass className="w-4 h-4" />
             </div>
             <span className="font-display text-base font-bold text-white">
-              Tour Việt Nam
+              Tour Kinh Doanh Việt Nam
             </span>
           </div>
 
@@ -2439,7 +2538,7 @@ export default function App() {
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-display text-lg font-bold text-white">
-                Hướng Dẫn Nhanh Tour Việt Nam
+                Hướng Dẫn Nhanh Tour Kinh Doanh
               </h3>
               <button
                 onClick={() => setShowRulesModal(false)}
@@ -2448,23 +2547,23 @@ export default function App() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <ul className="space-y-2.5 text-xs text-slate-300 leading-relaxed">
-              <li>
-                <strong className="text-white">• Điều kiện thắng ngay:</strong> Sở hữu trọn 3 nhóm màu, hoặc toàn bộ 1 cạnh bàn cờ, hoặc cả 4 Khu Nghỉ Dưỡng, hoặc làm đối thủ phá sản hết.
-              </li>
-              <li>
-                <strong className="text-white">• Mua & Xây nhà:</strong> Khi dừng ở đất trống, bạn có thể mua đất hoặc xây sẵn tới 3 nhà ngay lập tức. Khi dừng lại đất mình, có thể nâng lên Khách Sạn 5★.
-              </li>
-              <li>
-                <strong className="text-white">• Thâu tóm (Buyout):</strong> Có thể mua lại tỉnh thành của đối thủ với giá x2, trừ khi họ đã nâng lên Khách Sạn 5★.
-              </li>
-              <li>
-                <strong className="text-white">• Lễ Hội & Du Lịch:</strong> Ô Lễ Hội nhân đôi tiền thuê 1 tỉnh của bạn. Ô Du Lịch cho phép bay tới bất kỳ ô nào ở lượt kế tiếp.
-              </li>
-              <li>
-                <strong className="text-white">• Đảo Hoang:</strong> Tung ra Đôi, nộp 500K hoặc dùng Thẻ Thoát Đảo để rời đảo. Tung Đôi 3 lần liên tiếp cũng bị đưa ra đảo.
-              </li>
-            </ul>
+              <ul className="space-y-2.5 text-xs text-slate-300 leading-relaxed">
+                <li>
+                  <strong className="text-white">• Điều kiện thắng ngay:</strong> Sở hữu trọn 3 nhóm màu, hoặc toàn bộ 1 cạnh bàn cờ, hoặc cả 4 Khu Nghỉ Dưỡng, hoặc làm đối thủ phá sản hết.
+                </li>
+                <li>
+                  <strong className="text-white">• Mua & Xây nhà:</strong> Khi dừng ở đất trống, bạn có thể mua đất hoặc xây sẵn tới 3 nhà ngay lập tức. Khi dừng lại đất mình, có thể nâng lên Khách Sạn 5★.
+                </li>
+                <li>
+                  <strong className="text-white">• Thâu tóm (Buyout):</strong> Có thể mua lại tỉnh thành của đối thủ với giá x2, trừ Khách Sạn 5★ và Khu Nghỉ Dưỡng.
+                </li>
+                <li>
+                  <strong className="text-white">• Lễ Hội & Du Lịch:</strong> Ô Lễ Hội nhân đôi tiền thuê 1 tỉnh/khu nghỉ dưỡng của bạn. Ô Du Lịch cho phép bay tới bất kỳ ô nào ở lượt kế tiếp.
+                </li>
+                <li>
+                  <strong className="text-white">• Đảo Hoang:</strong> Tung ra Đôi, nộp 500K hoặc dùng Thẻ Thoát Đảo để rời đảo (tối đa 3 lượt, hết lượt 3 buộc nộp 500K). Tung Đôi 3 lần liên tiếp cũng bị đưa ra đảo.
+                </li>
+              </ul>
             <button
               onClick={() => setShowRulesModal(false)}
               className="mt-5 w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm cursor-pointer"

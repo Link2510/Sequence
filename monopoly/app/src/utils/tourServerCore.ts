@@ -26,6 +26,11 @@ interface InternalPlayerMeta {
   doublesStreak: number;
 }
 
+type PendingAfterPaid =
+  | { kind: 'JAIL_BAIL_MOVE'; playerId: number; steps: number }
+  | { kind: 'RENT_BUYOUT'; playerId: number; tileId: number }
+  | null;
+
 interface InternalRoom {
   code: string;
   hostClientId: string;
@@ -35,10 +40,12 @@ interface InternalRoom {
   game: RoomGameState | null;
   playerMeta: Record<number, InternalPlayerMeta>;
   extraTurn: boolean;
+  pendingAfterPaid: PendingAfterPaid;
   moveSeq: number;
   transferSeq: number;
   chanceSeq: number;
   aiTimer: ReturnType<typeof setTimeout> | null;
+  disconnectTimer: ReturnType<typeof setTimeout> | null;
   updatedAt: number;
 }
 
@@ -151,6 +158,13 @@ function clearAiTimer(room: InternalRoom) {
   }
 }
 
+function clearDisconnectTimer(room: InternalRoom) {
+  if (room.disconnectTimer) {
+    clearTimeout(room.disconnectTimer);
+    room.disconnectTimer = null;
+  }
+}
+
 function evaluateRoomVictory(room: InternalRoom): boolean {
   if (!room.game) return false;
   const summary: VictorySummary | null = checkVictoryConditions(
@@ -159,6 +173,8 @@ function evaluateRoomVictory(room: InternalRoom): boolean {
   );
   if (summary) {
     clearAiTimer(room);
+    clearDisconnectTimer(room);
+    room.pendingAfterPaid = null;
     room.game.victory = summary;
     room.game.turnStep = 'GAME_END';
     room.game.pendingModal = null;
@@ -170,6 +186,9 @@ function evaluateRoomVictory(room: InternalRoom): boolean {
 
 function advanceRoomTurn(room: InternalRoom) {
   if (!room.game) return;
+  clearDisconnectTimer(room);
+  room.pendingAfterPaid = null;
+
   if (evaluateRoomVictory(room)) {
     broadcastRoom(room);
     return;
@@ -186,13 +205,26 @@ function advanceRoomTurn(room: InternalRoom) {
     room.game.pendingModal = null;
     broadcastRoom(room);
     scheduleAITurnIfNeeded(room);
+    scheduleDisconnectFallbackIfNeeded(room);
     return;
   }
 
   room.extraTurn = false;
+  // Reset outgoing player's doublesStreak so it cannot carry over to a later round (e.g. after World Tour)
+  if (curPlayer) {
+    if (room.playerMeta[curPlayer.id]) {
+      room.playerMeta[curPlayer.id].doublesStreak = 0;
+    }
+    if (curPlayer.doublesStreak !== 0) {
+      room.game.players = players.map((p) =>
+        p.id === curPlayer.id ? { ...p, doublesStreak: 0 } : p
+      );
+    }
+  }
+
   let nextIdx = (curIdx + 1) % players.length;
   let guard = 0;
-  while (players[nextIdx]?.bankrupt && guard < players.length) {
+  while (room.game.players[nextIdx]?.bankrupt && guard < players.length) {
     nextIdx = (nextIdx + 1) % players.length;
     guard += 1;
   }
@@ -202,6 +234,7 @@ function advanceRoomTurn(room: InternalRoom) {
   room.game.pendingModal = null;
   broadcastRoom(room);
   scheduleAITurnIfNeeded(room);
+  scheduleDisconnectFallbackIfNeeded(room);
 }
 
 function eliminateRoomPlayer(
@@ -211,18 +244,41 @@ function eliminateRoomPlayer(
   reason: string
 ) {
   if (!room.game) return;
+  clearDisconnectTimer(room);
+  room.pendingAfterPaid = null;
   const victim = room.game.players.find((p) => p.id === playerId);
   const victimCash = Math.max(0, victim?.cash ?? 0);
 
   room.game.players = room.game.players.map((p) => {
     if (p.id === playerId) {
-      return { ...p, cash: 0, bankrupt: true, inJail: false };
+      return {
+        ...p,
+        cash: 0,
+        bankrupt: true,
+        inJail: false,
+        worldTourReady: false,
+        doublesStreak: 0,
+      };
     }
     if (creditorId !== null && p.id === creditorId) {
       return { ...p, cash: p.cash + victimCash };
     }
     return p;
   });
+
+  if (room.playerMeta[playerId]) {
+    room.playerMeta[playerId].doublesStreak = 0;
+  }
+
+  if (creditorId !== null && victimCash > 0) {
+    pushTransfer(
+      room,
+      playerId,
+      creditorId,
+      victimCash,
+      `Tài sản thanh lý (${reason})`
+    );
+  }
 
   const nextOwnership = { ...room.game.ownership };
   for (const [k, prop] of Object.entries(nextOwnership)) {
@@ -305,7 +361,8 @@ function chargeRoomPlayer(
   amount: number,
   creditorId: number | null,
   reason: string,
-  afterPaid?: () => void
+  afterPaid?: () => void,
+  pendingAction: PendingAfterPaid = null
 ) {
   if (!room.game) return;
   const payer = room.game.players.find((p) => p.id === playerId);
@@ -320,6 +377,7 @@ function chargeRoomPlayer(
       return p;
     });
     pushTransfer(room, playerId, creditorId ?? 'BANK', amount, reason);
+    room.pendingAfterPaid = null;
     if (afterPaid) {
       afterPaid();
     } else {
@@ -361,6 +419,7 @@ function chargeRoomPlayer(
         return p;
       });
       pushTransfer(room, playerId, creditorId ?? 'BANK', amount, reason);
+      room.pendingAfterPaid = null;
       if (afterPaid) {
         afterPaid();
       } else {
@@ -384,6 +443,7 @@ function chargeRoomPlayer(
     return;
   }
 
+  room.pendingAfterPaid = pendingAction;
   room.game.turnStep = 'RESOLVING';
   room.game.pendingModal = {
     forPlayerId: playerId,
@@ -395,6 +455,7 @@ function chargeRoomPlayer(
     },
   };
   broadcastRoom(room);
+  scheduleDisconnectFallbackIfNeeded(room);
 }
 
 function applyRoomChanceCard(
@@ -443,7 +504,14 @@ function applyRoomChanceCard(
       room.extraTurn = false;
       room.game.players = room.game.players.map((p) =>
         p.id === playerId
-          ? { ...p, position: 8, inJail: true, jailTurns: 0, doublesStreak: 0 }
+          ? {
+              ...p,
+              position: 8,
+              inJail: true,
+              jailTurns: 0,
+              doublesStreak: 0,
+              worldTourReady: false,
+            }
           : p
       );
       if (room.playerMeta[playerId]) {
@@ -540,7 +608,13 @@ function resolveRoomTileLanding(
     room.extraTurn = false;
     room.game.players = room.game.players.map((p) =>
       p.id === playerId
-        ? { ...p, inJail: true, jailTurns: 0, doublesStreak: 0 }
+        ? {
+            ...p,
+            inJail: true,
+            jailTurns: 0,
+            doublesStreak: 0,
+            worldTourReady: false,
+          }
         : p
     );
     if (room.playerMeta[playerId]) {
@@ -600,6 +674,7 @@ function resolveRoomTileLanding(
 
     room.game.turnStep = 'SELECT_FESTIVAL';
     broadcastRoom(room);
+    scheduleDisconnectFallbackIfNeeded(room);
     return;
   }
 
@@ -629,6 +704,7 @@ function resolveRoomTileLanding(
       modal: { type: 'CHANCE_CARD', card },
     };
     broadcastRoom(room);
+    scheduleDisconnectFallbackIfNeeded(room);
     return;
   }
 
@@ -680,6 +756,7 @@ function resolveRoomTileLanding(
       modal: { type: 'BUY_PROPERTY', tileId: tile.id },
     };
     broadcastRoom(room);
+    scheduleDisconnectFallbackIfNeeded(room);
     return;
   }
 
@@ -719,6 +796,7 @@ function resolveRoomTileLanding(
       modal: { type: 'UPGRADE_PROPERTY', tileId: tile.id },
     };
     broadcastRoom(room);
+    scheduleDisconnectFallbackIfNeeded(room);
     return;
   }
 
@@ -737,65 +815,75 @@ function resolveRoomTileLanding(
     rent,
     prop.ownerId,
     `Tiền thuê ${tile.name}`,
-    () => {
-      if (!room.game) return;
-      const payerAfter = room.game.players.find((p) => p.id === playerId);
-      const canBuyout =
-        payerAfter &&
-        !payerAfter.bankrupt &&
-        tile.type === 'PROPERTY' &&
-        prop.level < 4;
-
-      if (!canBuyout) {
-        advanceRoomTurn(room);
-        return;
-      }
-
-      const buyoutPrice = calculateBuyoutPrice(tile, prop);
-      if (payerAfter.cash < buyoutPrice) {
-        advanceRoomTurn(room);
-        return;
-      }
-
-      if (payerAfter.isAI) {
-        if (
-          shouldAIBuyout(payerAfter, tile, room.game.ownership, buyoutPrice)
-        ) {
-          room.game.players = room.game.players.map((p) => {
-            if (p.id === playerId) return { ...p, cash: p.cash - buyoutPrice };
-            if (p.id === prop.ownerId)
-              return { ...p, cash: p.cash + buyoutPrice };
-            return p;
-          });
-          pushTransfer(
-            room,
-            playerId,
-            prop.ownerId,
-            buyoutPrice,
-            `Thâu tóm ${tile.name}`
-          );
-          room.game.ownership = {
-            ...room.game.ownership,
-            [tile.id]: { ...prop, ownerId: playerId },
-          };
-          pushLog(
-            room,
-            `${payerAfter.name} thâu tóm lại ${tile.name} với giá ${formatMoney(buyoutPrice)}!`,
-            'warn'
-          );
-        }
-        advanceRoomTurn(room);
-        return;
-      }
-
-      room.game.turnStep = 'RESOLVING';
-      room.game.pendingModal = {
-        forPlayerId: playerId,
-        modal: { type: 'BUYOUT_PROPERTY', tileId: tile.id, buyoutPrice },
-      };
-      broadcastRoom(room);
-    }
+    () => handleRoomRentBuyout(room, playerId, tile.id),
+    { kind: 'RENT_BUYOUT', playerId, tileId: tile.id }
   );
+}
+
+function handleRoomRentBuyout(
+  room: InternalRoom,
+  playerId: number,
+  tileId: number
+) {
+  if (!room.game) return;
+  const tile = getTileById(tileId);
+  const payerAfter = room.game.players.find((p) => p.id === playerId);
+  const latestProp = room.game.ownership[tileId];
+  const canBuyout =
+    payerAfter &&
+    !payerAfter.bankrupt &&
+    latestProp &&
+    latestProp.ownerId !== playerId &&
+    tile.type === 'PROPERTY' &&
+    latestProp.level < 4;
+
+  if (!canBuyout) {
+    advanceRoomTurn(room);
+    return;
+  }
+
+  const buyoutPrice = calculateBuyoutPrice(tile, latestProp);
+  if (payerAfter.cash < buyoutPrice) {
+    advanceRoomTurn(room);
+    return;
+  }
+
+  if (payerAfter.isAI) {
+    if (shouldAIBuyout(payerAfter, tile, room.game.ownership, buyoutPrice)) {
+      room.game.players = room.game.players.map((p) => {
+        if (p.id === playerId) return { ...p, cash: p.cash - buyoutPrice };
+        if (p.id === latestProp.ownerId)
+          return { ...p, cash: p.cash + buyoutPrice };
+        return p;
+      });
+      pushTransfer(
+        room,
+        playerId,
+        latestProp.ownerId,
+        buyoutPrice,
+        `Thâu tóm ${tile.name}`
+      );
+      room.game.ownership = {
+        ...room.game.ownership,
+        [tileId]: { ...latestProp, ownerId: playerId },
+      };
+      pushLog(
+        room,
+        `${payerAfter.name} thâu tóm lại ${tile.name} với giá ${formatMoney(buyoutPrice)}!`,
+        'warn'
+      );
+    }
+    advanceRoomTurn(room);
+    return;
+  }
+
+  room.game.turnStep = 'RESOLVING';
+  room.game.pendingModal = {
+    forPlayerId: playerId,
+    modal: { type: 'BUYOUT_PROPERTY', tileId, buyoutPrice },
+  };
+  broadcastRoom(room);
+  scheduleDisconnectFallbackIfNeeded(room);
 }
 
 function executeRoomDiceRoll(
@@ -826,6 +914,7 @@ function executeRoomDiceRoll(
     } else {
       room.game.turnStep = 'SELECT_WORLD_TOUR';
       broadcastRoom(room);
+      scheduleDisconnectFallbackIfNeeded(room);
     }
     return;
   }
@@ -848,6 +937,9 @@ function executeRoomDiceRoll(
           ? { ...p, inJail: false, jailTurns: 0, doublesStreak: 0 }
           : p
       );
+      if (room.playerMeta[playerId]) {
+        room.playerMeta[playerId].doublesStreak = 0;
+      }
       room.extraTurn = false;
       const landed = moveRoomPlayerSteps(room, playerId, totalSteps, true);
       resolveRoomTileLanding(room, playerId, landed);
@@ -862,12 +954,26 @@ function executeRoomDiceRoll(
         'warn'
       );
       room.game.players = room.game.players.map((p) =>
-        p.id === playerId ? { ...p, inJail: false, jailTurns: 0 } : p
+        p.id === playerId
+          ? { ...p, inJail: false, jailTurns: 0, doublesStreak: 0 }
+          : p
       );
-      chargeRoomPlayer(room, playerId, JAIL_BAIL, null, 'Phí rời Đảo Hoang', () => {
-        const landed = moveRoomPlayerSteps(room, playerId, totalSteps, true);
-        resolveRoomTileLanding(room, playerId, landed);
-      });
+      if (room.playerMeta[playerId]) {
+        room.playerMeta[playerId].doublesStreak = 0;
+      }
+      room.extraTurn = false;
+      chargeRoomPlayer(
+        room,
+        playerId,
+        JAIL_BAIL,
+        null,
+        'Phí rời Đảo Hoang',
+        () => {
+          const landed = moveRoomPlayerSteps(room, playerId, totalSteps, true);
+          resolveRoomTileLanding(room, playerId, landed);
+        },
+        { kind: 'JAIL_BAIL_MOVE', playerId, steps: totalSteps }
+      );
     } else {
       room.game.players = room.game.players.map((p) =>
         p.id === playerId ? { ...p, jailTurns: newTurns } : p
@@ -888,7 +994,14 @@ function executeRoomDiceRoll(
       room.extraTurn = false;
       room.game.players = room.game.players.map((p) =>
         p.id === playerId
-          ? { ...p, position: 8, inJail: true, jailTurns: 0, doublesStreak: 0 }
+          ? {
+              ...p,
+              position: 8,
+              inJail: true,
+              jailTurns: 0,
+              doublesStreak: 0,
+              worldTourReady: false,
+            }
           : p
       );
       if (room.playerMeta[playerId]) {
@@ -941,6 +1054,7 @@ function scheduleAITurnIfNeeded(room: InternalRoom) {
 
   room.aiTimer = setTimeout(() => {
     if (room.status !== 'PLAYING' || !room.game) return;
+    if (room.game.turnStep !== 'WAIT_ROLL' || room.game.pendingModal) return;
     const current = room.game.players[room.game.currentPlayerIndex];
     if (!current || !current.isAI || current.bankrupt) return;
 
@@ -983,8 +1097,240 @@ function scheduleAITurnIfNeeded(room: InternalRoom) {
   }, 950);
 }
 
+function convertRoomPlayerToAI(
+  room: InternalRoom,
+  playerId: number,
+  reasonLabel: string
+) {
+  if (room.status !== 'PLAYING' || !room.game) return;
+  const meta = room.playerMeta[playerId];
+  const slot = meta ? room.slots[meta.slotIndex] : undefined;
+  const targetPlayer = room.game.players.find((p) => p.id === playerId);
+  if (!targetPlayer || targetPlayer.isAI || targetPlayer.bankrupt) return;
+
+  if (slot) {
+    slot.kind = 'AI';
+    slot.clientId = null;
+    slot.connected = true;
+  }
+  if (meta) {
+    meta.clientId = null;
+  }
+
+  const aiName = targetPlayer.name.endsWith('(AI)')
+    ? targetPlayer.name
+    : `${targetPlayer.name} (AI)`;
+  if (slot) slot.name = aiName;
+
+  room.game.players = room.game.players.map((p) =>
+    p.id === playerId ? { ...p, isAI: true, name: aiName } : p
+  );
+  pushLog(room, `${targetPlayer.name} ${reasonLabel} — Máy AI tiếp quản.`, 'warn');
+
+  const current = room.game.players[room.game.currentPlayerIndex];
+  if (!current || current.id !== playerId) {
+    broadcastRoom(room);
+    return;
+  }
+
+  // If this player is blocking a modal or special selection, resolve as AI immediately
+  const pending = room.game.pendingModal;
+  if (pending && pending.forPlayerId === playerId) {
+    const modal = pending.modal;
+    room.game.pendingModal = null;
+    if (modal?.type === 'CHANCE_CARD') {
+      applyRoomChanceCard(room, playerId, modal.card);
+      return;
+    }
+    if (modal?.type === 'JAIL_OPTIONS') {
+      scheduleAITurnIfNeeded(room);
+      broadcastRoom(room);
+      return;
+    }
+    if (modal?.type === 'BUY_PROPERTY') {
+      const tile = getTileById(modal.tileId);
+      const lvl = chooseAILevelToBuy(current, tile, -1);
+      if (lvl !== null) {
+        const effectiveLevel = tile.type === 'RESORT' ? 0 : lvl;
+        const cost = (tile.price ?? 0) + effectiveLevel * (tile.houseCost ?? 0);
+        if (current.cash >= cost) {
+          room.game.players = room.game.players.map((p) =>
+            p.id === playerId ? { ...p, cash: p.cash - cost } : p
+          );
+          pushTransfer(room, playerId, 'BANK', cost, `Mua ${tile.name}`);
+          room.game.ownership = {
+            ...room.game.ownership,
+            [tile.id]: {
+              ownerId: playerId,
+              level: effectiveLevel,
+              hasFestival: false,
+            },
+          };
+          pushLog(room, `${aiName} mua ${tile.name} giá ${formatMoney(cost)}.`, 'good');
+        }
+      }
+      advanceRoomTurn(room);
+      return;
+    }
+    if (modal?.type === 'UPGRADE_PROPERTY') {
+      const tile = getTileById(modal.tileId);
+      const prop = room.game.ownership[tile.id];
+      if (prop && prop.ownerId === playerId) {
+        const nextLvl = chooseAILevelToBuy(current, tile, prop.level);
+        if (nextLvl !== null && nextLvl > prop.level) {
+          const cost = (nextLvl - prop.level) * (tile.houseCost ?? 0);
+          if (current.cash >= cost) {
+            room.game.players = room.game.players.map((p) =>
+              p.id === playerId ? { ...p, cash: p.cash - cost } : p
+            );
+            pushTransfer(room, playerId, 'BANK', cost, `Nâng cấp ${tile.name}`);
+            room.game.ownership = {
+              ...room.game.ownership,
+              [tile.id]: { ...prop, level: nextLvl },
+            };
+          }
+        }
+      }
+      advanceRoomTurn(room);
+      return;
+    }
+    if (modal?.type === 'BUYOUT_PROPERTY') {
+      const tile = getTileById(modal.tileId);
+      const prop = room.game.ownership[tile.id];
+      if (
+        prop &&
+        prop.ownerId !== playerId &&
+        current.cash >= modal.buyoutPrice &&
+        shouldAIBuyout(current, tile, room.game.ownership, modal.buyoutPrice)
+      ) {
+        room.game.players = room.game.players.map((p) => {
+          if (p.id === playerId) return { ...p, cash: p.cash - modal.buyoutPrice };
+          if (p.id === prop.ownerId)
+            return { ...p, cash: p.cash + modal.buyoutPrice };
+          return p;
+        });
+        pushTransfer(
+          room,
+          playerId,
+          prop.ownerId,
+          modal.buyoutPrice,
+          `Thâu tóm ${tile.name}`
+        );
+        room.game.ownership = {
+          ...room.game.ownership,
+          [tile.id]: { ...prop, ownerId: playerId },
+        };
+      }
+      advanceRoomTurn(room);
+      return;
+    }
+    if (modal?.type === 'LIQUIDATE') {
+      const pendingAction = room.pendingAfterPaid;
+      room.pendingAfterPaid = null;
+      chargeRoomPlayer(
+        room,
+        playerId,
+        modal.amountOwed,
+        modal.creditorId,
+        modal.reason,
+        () => {
+          if (pendingAction?.kind === 'JAIL_BAIL_MOVE') {
+            const landed = moveRoomPlayerSteps(
+              room,
+              pendingAction.playerId,
+              pendingAction.steps,
+              true
+            );
+            resolveRoomTileLanding(room, pendingAction.playerId, landed);
+          } else if (pendingAction?.kind === 'RENT_BUYOUT') {
+            handleRoomRentBuyout(
+              room,
+              pendingAction.playerId,
+              pendingAction.tileId
+            );
+          } else {
+            advanceRoomTurn(room);
+          }
+        },
+        pendingAction
+      );
+      return;
+    }
+  }
+
+  if (room.game.turnStep === 'SELECT_FESTIVAL') {
+    const targetId = chooseAIFestivalTile(playerId, room.game.ownership);
+    if (targetId !== null) {
+      const targetTile = getTileById(targetId);
+      const nextOwn = { ...room.game.ownership };
+      for (const [k, v] of Object.entries(nextOwn)) {
+        if (v.ownerId === playerId && v.hasFestival) {
+          nextOwn[Number(k)] = { ...v, hasFestival: false };
+        }
+      }
+      nextOwn[targetId] = { ...nextOwn[targetId], hasFestival: true };
+      room.game.ownership = nextOwn;
+      pushLog(
+        room,
+        `${aiName} tổ chức Lễ Hội x2 tiền thuê tại ${targetTile.name}!`,
+        'good'
+      );
+    }
+    advanceRoomTurn(room);
+    return;
+  }
+
+  if (room.game.turnStep === 'SELECT_WORLD_TOUR') {
+    const destId = chooseAIWorldTourTile(current, room.game.ownership);
+    const destTile = getTileById(destId);
+    pushLog(room, `${aiName} bay thẳng từ Du Lịch tới ${destTile.name}!`, 'good');
+    room.game.players = room.game.players.map((p) =>
+      p.id === playerId ? { ...p, worldTourReady: false } : p
+    );
+    const total = BOARD_TILES.length;
+    const steps = (destId - current.position + total) % total || total;
+    const landed = moveRoomPlayerSteps(room, playerId, steps, true);
+    resolveRoomTileLanding(room, playerId, landed);
+    return;
+  }
+
+  scheduleAITurnIfNeeded(room);
+  broadcastRoom(room);
+}
+
+function scheduleDisconnectFallbackIfNeeded(room: InternalRoom) {
+  clearDisconnectTimer(room);
+  if (room.status !== 'PLAYING' || !room.game) return;
+  const current = room.game.players[room.game.currentPlayerIndex];
+  if (!current || current.isAI || current.bankrupt) return;
+
+  const meta = room.playerMeta[current.id];
+  const slot = meta ? room.slots[meta.slotIndex] : undefined;
+  if (!slot || slot.connected) return;
+
+  const blockedPlayerId = current.id;
+  room.disconnectTimer = setTimeout(() => {
+    if (room.status !== 'PLAYING' || !room.game) return;
+    const curNow = room.game.players[room.game.currentPlayerIndex];
+    const metaNow = room.playerMeta[blockedPlayerId];
+    const slotNow = metaNow ? room.slots[metaNow.slotIndex] : undefined;
+    if (
+      !curNow ||
+      curNow.id !== blockedPlayerId ||
+      curNow.isAI ||
+      curNow.bankrupt ||
+      !slotNow ||
+      slotNow.connected
+    ) {
+      return;
+    }
+    convertRoomPlayerToAI(room, blockedPlayerId, 'mất kết nối quá lâu');
+  }, 25000);
+}
+
 function startRoomMatch(room: InternalRoom) {
   clearAiTimer(room);
+  clearDisconnectTimer(room);
   const activeSlots = room.slots.filter((s) => s.kind !== 'OPEN');
   if (activeSlots.length < 2) return;
 
@@ -1019,6 +1365,7 @@ function startRoomMatch(room: InternalRoom) {
 
   room.playerMeta = playerMeta;
   room.extraTurn = false;
+  room.pendingAfterPaid = null;
   room.moveSeq = 0;
   room.transferSeq = 0;
   room.chanceSeq = 0;
@@ -1070,6 +1417,7 @@ function handleGameAction(
           modal: { type: 'JAIL_OPTIONS' },
         };
         broadcastRoom(room);
+        scheduleDisconnectFallbackIfNeeded(room);
         return;
       }
       executeRoomDiceRoll(room, current.id, false);
@@ -1361,7 +1709,23 @@ function handleGameAction(
         return p;
       });
       pushTransfer(room, current.id, creditorId ?? 'BANK', amountOwed, reason);
-      advanceRoomTurn(room);
+      room.game.pendingModal = null;
+
+      const pendingAction = room.pendingAfterPaid;
+      room.pendingAfterPaid = null;
+      if (pendingAction?.kind === 'JAIL_BAIL_MOVE') {
+        const landed = moveRoomPlayerSteps(
+          room,
+          pendingAction.playerId,
+          pendingAction.steps,
+          true
+        );
+        resolveRoomTileLanding(room, pendingAction.playerId, landed);
+      } else if (pendingAction?.kind === 'RENT_BUYOUT') {
+        handleRoomRentBuyout(room, pendingAction.playerId, pendingAction.tileId);
+      } else {
+        advanceRoomTurn(room);
+      }
       break;
     }
 
@@ -1378,6 +1742,8 @@ function handleGameAction(
     }
   }
 }
+
+
 
 export type EmitFn = (clientId: string, msg: ServerWsMessage) => void;
 let emitFn: EmitFn = () => {};
@@ -1478,10 +1844,12 @@ export function handleBrowserMessage(clientId: string, raw: string) {
           game: null,
           playerMeta: {},
           extraTurn: false,
+          pendingAfterPaid: null,
           moveSeq: 0,
           transferSeq: 0,
           chanceSeq: 0,
           aiTimer: null,
+          disconnectTimer: null,
           updatedAt: Date.now(),
         };
 
@@ -1507,6 +1875,7 @@ export function handleBrowserMessage(clientId: string, raw: string) {
         const existing = room.slots.find((s) => s.clientId === msg.clientId);
         if (existing) {
           existing.connected = true;
+          clearDisconnectTimer(room);
           if (connInfo) connInfo.roomCode = room.code;
           broadcastRoom(room);
           return;
@@ -1557,15 +1926,19 @@ export function handleBrowserMessage(clientId: string, raw: string) {
       if (msg.type === 'LEAVE_ROOM') {
         const slot = room.slots.find((s) => s.clientId === msg.clientId);
         if (slot) {
-          if (room.status === 'WAITING') {
-            if (msg.clientId === room.hostClientId) {
-              const nextHuman = room.slots.find(
-                (s) => s.kind === 'HUMAN' && s.clientId !== msg.clientId && s.clientId
-              );
-              if (nextHuman && nextHuman.clientId) {
-                room.hostClientId = nextHuman.clientId;
-              }
+          if (msg.clientId === room.hostClientId) {
+            const nextHuman = room.slots.find(
+              (s) =>
+                s.kind === 'HUMAN' &&
+                s.clientId !== msg.clientId &&
+                s.clientId !== null
+            );
+            if (nextHuman && nextHuman.clientId) {
+              room.hostClientId = nextHuman.clientId;
             }
+          }
+
+          if (room.status === 'WAITING') {
             slot.kind = 'OPEN';
             slot.clientId = null;
             slot.name = 'Ghế trống';
@@ -1573,6 +1946,18 @@ export function handleBrowserMessage(clientId: string, raw: string) {
             slot.connected = false;
           } else {
             slot.connected = false;
+            if (room.status === 'PLAYING' && room.game) {
+              const playerEntry = Object.entries(room.playerMeta).find(
+                ([, m]) => m.clientId === msg.clientId
+              );
+              if (playerEntry) {
+                const leavingId = Number(playerEntry[0]);
+                if (connInfo) connInfo.roomCode = null;
+                sendWs(ws, { type: 'ROOM_LEFT' });
+                convertRoomPlayerToAI(room, leavingId, 'đã rời phòng');
+                return;
+              }
+            }
           }
         }
         if (connInfo) connInfo.roomCode = null;
@@ -1678,6 +2063,8 @@ export function handleBrowserMessage(clientId: string, raw: string) {
       if (msg.type === 'RETURN_TO_WAITING') {
         if (room.hostClientId !== msg.clientId) return;
         clearAiTimer(room);
+        clearDisconnectTimer(room);
+        room.pendingAfterPaid = null;
         room.status = 'WAITING';
         room.game = null;
         broadcastRoom(room);
@@ -1700,6 +2087,7 @@ export function disconnectBrowserClient(clientId: string) {
           if (slot) {
             slot.connected = false;
             broadcastRoom(room);
+            scheduleDisconnectFallbackIfNeeded(room);
           }
         }
       }

@@ -520,7 +520,7 @@ export const CHANCE_CARDS: ChanceCard[] = [
   {
     id: 'c8',
     title: 'Phí Bảo Trì Công Trình',
-    description: 'Đóng 200K cho mỗi nhà/khách sạn bạn đang sở hữu trên bản đồ.',
+    description: 'Đóng 200K cho mỗi cấp nhà/khách sạn bạn đang sở hữu trên bản đồ.',
     kind: 'REPAIR',
     amount: 200,
   },

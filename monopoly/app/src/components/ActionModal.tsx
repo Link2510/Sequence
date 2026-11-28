@@ -22,7 +22,9 @@ import {
   calculateSellValue,
   formatMoney,
   getPlayerOwnedTiles,
+  getPlayerResortCount,
   getTileById,
+  playerHasMonopoly,
 } from '../utils/gameLogic';
 import { BuildingVisual } from './BuildingVisual';
 
@@ -71,6 +73,16 @@ export const ActionModal: React.FC<ActionModalProps> = ({
     const owner = prop ? players.find((p) => p.id === prop.ownerId) : null;
     const groupMeta = inspectedTile.group
       ? COLOR_GROUP_META[inspectedTile.group]
+      : null;
+    const ownerHasMono =
+      prop && inspectedTile.group
+        ? playerHasMonopoly(prop.ownerId, inspectedTile.group, ownership)
+        : false;
+    const ownerResortCount = prop
+      ? getPlayerResortCount(prop.ownerId, ownership)
+      : 0;
+    const effectiveCurrentRent = prop
+      ? calculateRent(inspectedTile, ownership)
       : null;
 
     return (
@@ -128,21 +140,28 @@ export const ActionModal: React.FC<ActionModalProps> = ({
                     '2 Nhà',
                     '3 Nhà',
                     'Khách Sạn 5★ (Chống mua lại)',
-                  ].map((label, idx) => (
-                    <div
-                      key={label}
-                      className={`flex justify-between px-2 py-1 rounded ${
-                        prop?.level === idx
-                          ? 'bg-amber-500/20 text-amber-300 font-semibold'
-                          : 'text-slate-300'
-                      }`}
-                    >
-                      <span>{label}</span>
-                      <span className="font-mono-num">
-                        {formatMoney(inspectedTile.rents![idx])}
-                      </span>
-                    </div>
-                  ))}
+                  ].map((label, idx) => {
+                    const isCurrent = prop?.level === idx;
+                    const rowRent =
+                      idx === 0 && ownerHasMono
+                        ? inspectedTile.rents![idx] * 2
+                        : inspectedTile.rents![idx];
+                    return (
+                      <div
+                        key={label}
+                        className={`flex justify-between px-2 py-1 rounded ${
+                          isCurrent
+                            ? 'bg-amber-500/20 text-amber-300 font-semibold'
+                            : 'text-slate-300'
+                        }`}
+                      >
+                        <span>{label}</span>
+                        <span className="font-mono-num">
+                          {formatMoney(rowRent)}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -155,39 +174,58 @@ export const ActionModal: React.FC<ActionModalProps> = ({
                     {formatMoney(inspectedTile.price ?? 0)}
                   </span>
                 </div>
-                {RESORT_RENTS.map((rent, idx) => (
-                  <div
-                    key={idx}
-                    className="flex justify-between px-2 py-1 text-slate-300"
-                  >
-                    <span>Khi sở hữu {idx + 1} Khu Nghỉ Dưỡng</span>
-                    <span className="font-mono-num text-cyan-300 font-semibold">
-                      {formatMoney(rent)}
-                    </span>
-                  </div>
-                ))}
+                {RESORT_RENTS.map((rent, idx) => {
+                  const isCurrent = Boolean(prop) && ownerResortCount === idx + 1;
+                  return (
+                    <div
+                      key={idx}
+                      className={`flex justify-between px-2 py-1 rounded ${
+                        isCurrent
+                          ? 'bg-amber-500/20 text-amber-300 font-semibold'
+                          : 'text-slate-300'
+                      }`}
+                    >
+                      <span>Khi sở hữu {idx + 1} Khu Nghỉ Dưỡng</span>
+                      <span className="font-mono-num text-cyan-300 font-semibold">
+                        {formatMoney(rent)}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
             {inspectedTile.type !== 'PROPERTY' && inspectedTile.type !== 'RESORT' && (
               <p className="mt-4 text-sm text-slate-300 leading-relaxed">
-                {inspectedTile.subtitle || 'Ô sự kiện đặc biệt trên bản đồ Tour Việt Nam.'}
+                {inspectedTile.type === 'TAX' && inspectedTile.taxPercent
+                  ? `Đóng thuế thu nhập bằng ${inspectedTile.taxPercent}% tiền mặt hiện có (tối thiểu 200K).`
+                  : inspectedTile.subtitle || 'Ô sự kiện đặc biệt trên bản đồ Tour Kinh Doanh Việt Nam.'}
               </p>
             )}
 
-            <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs">
-              <span className="text-slate-400">Chủ sở hữu</span>
-              {owner ? (
-                <span className="font-semibold text-white flex items-center gap-2">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full"
-                    style={{ backgroundColor: PLAYER_COLORS[owner.color].hex }}
-                  />
-                  {owner.name}
-                  {prop?.hasFestival ? ' · Đang Lễ Hội (x2)' : ''}
-                </span>
-              ) : (
-                <span className="text-slate-400">Chưa có chủ</span>
+            <div className="mt-4 pt-3 border-t border-white/10 space-y-1.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Chủ sở hữu</span>
+                {owner ? (
+                  <span className="font-semibold text-white flex items-center gap-2">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ backgroundColor: PLAYER_COLORS[owner.color].hex }}
+                    />
+                    {owner.name}
+                    {prop?.hasFestival ? ' · Đang Lễ Hội (x2)' : ''}
+                  </span>
+                ) : (
+                  <span className="text-slate-400">Chưa có chủ</span>
+                )}
+              </div>
+              {effectiveCurrentRent !== null && (
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">Tiền thuê thực thu hiện tại</span>
+                  <span className="font-mono-num font-bold text-amber-300">
+                    {formatMoney(effectiveCurrentRent)}
+                  </span>
+                </div>
               )}
             </div>
           </div>
@@ -205,11 +243,44 @@ export const ActionModal: React.FC<ActionModalProps> = ({
     const landPrice = tile.price ?? 0;
     const houseCost = tile.houseCost ?? 0;
 
-    const options: { level: 0 | 1 | 2 | 3; label: string; cost: number; rent: number }[] =
+    const currentResorts = getPlayerResortCount(currentPlayer.id, ownership);
+    const nextResortRent = RESORT_RENTS[Math.min(3, currentResorts)];
+    const willCompleteMonopoly = Boolean(
+      tile.group &&
+        tile.group !== 'resort' &&
+        COLOR_GROUP_META[tile.group].tileIds.every(
+          (id) => id === tile.id || ownership[id]?.ownerId === currentPlayer.id
+        )
+    );
+
+    const options: {
+      level: 0 | 1 | 2 | 3;
+      label: string;
+      cost: number;
+      rent: number;
+      rentNote?: string;
+    }[] =
       tile.type === 'RESORT'
-        ? [{ level: 0, label: 'Mua Khu Nghỉ Dưỡng', cost: landPrice, rent: 250 }]
+        ? [
+            {
+              level: 0,
+              label: 'Mua Khu Nghỉ Dưỡng',
+              cost: landPrice,
+              rent: nextResortRent,
+              rentNote:
+                currentResorts > 0
+                  ? `(Khu thứ ${currentResorts + 1})`
+                  : undefined,
+            },
+          ]
         : [
-            { level: 0, label: 'Chỉ mua Đất', cost: landPrice, rent: tile.rents![0] },
+            {
+              level: 0,
+              label: 'Chỉ mua Đất',
+              cost: landPrice,
+              rent: willCompleteMonopoly ? tile.rents![0] * 2 : tile.rents![0],
+              rentNote: willCompleteMonopoly ? '(Độc quyền x2!)' : undefined,
+            },
             { level: 1, label: 'Đất + 1 Nhà', cost: landPrice + houseCost, rent: tile.rents![1] },
             { level: 2, label: 'Đất + 2 Nhà', cost: landPrice + houseCost * 2, rent: tile.rents![2] },
             { level: 3, label: 'Đất + 3 Nhà', cost: landPrice + houseCost * 3, rent: tile.rents![3] },
@@ -272,6 +343,7 @@ export const ActionModal: React.FC<ActionModalProps> = ({
                         </div>
                         <div className="text-xs text-slate-400 mt-0.5">
                           Tiền thuê thu về: {formatMoney(opt.rent)}
+                          {opt.rentNote ? ` ${opt.rentNote}` : ''}
                         </div>
                       </div>
                     </div>
@@ -329,7 +401,8 @@ export const ActionModal: React.FC<ActionModalProps> = ({
               {upgradeLevels.map((lvl) => {
                 const cost = (lvl - currentLevel) * houseCost;
                 const canAfford = currentPlayer.cash >= cost;
-                const newRent = tile.rents ? tile.rents[lvl] : 0;
+                const baseRent = tile.rents ? tile.rents[lvl] : 0;
+                const newRent = prop?.hasFestival ? baseRent * 2 : baseRent;
 
                 return (
                   <button
@@ -364,6 +437,7 @@ export const ActionModal: React.FC<ActionModalProps> = ({
                         </div>
                         <div className="text-xs text-slate-400 mt-0.5">
                           Tiền thuê mới: {formatMoney(newRent)}
+                          {prop?.hasFestival ? ' (đã x2 Lễ Hội)' : ''}
                         </div>
                       </div>
                     </div>

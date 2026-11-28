@@ -15,6 +15,21 @@ Trò chơi cờ tỷ phú chiến thuật, bàn **32 ô** với địa danh Vi�
   - `app/src/utils/firebaseRooms.ts`: lớp vận chuyển qua RTDB — chủ phòng xử lý intent, phát view riêng cho từng client.
 - Đường dẫn dữ liệu: `lotr-fotr-rooms/tour-rooms/{intents,views}` trong project Firebase `sequence-23c7f` — **dùng chung rules hiện có, không cần deploy rules**.
 
+## Build lại từ source mới
+
+```powershell
+cd G:\AI\web\sequence\Sequence\monopoly\app
+npm install --legacy-peer-deps
+npx vite build
+Copy-Item 'dist\*' '..' -Recurse -Force
+Remove-Item 'dist' -Recurse -Force
+cd ..\..
+powershell -ExecutionPolicy Bypass -File .\patch-back-button.ps1 -Files .\monopoly\index.html
+firebase deploy --only hosting:boardgameace --project sequence-23c7f
+```
+
+Lưu ý: source gốc chỉ chạy WebSocket (`server.ts`). Khi cập nhật source, phải **regenerate `app/src/utils/tourServerCore.ts`** từ `server.ts` mới và cắm lại Firebase transport trong `app/src/App.tsx` (`connectFirebaseRooms`/`sendFirebaseMessage`), nếu không nút tạo phòng sẽ bị vô hiệu trên hosting tĩnh. Xem `G:\AI\web\BOARDGAME-MEMORY.md`.
+
 ## Quyền riêng tư
 
 - Chế độ local **không gọi mạng**, không tài khoản, không telemetry.
