@@ -1,0 +1,6 @@
+{
+  "name": "The Fellowship of the Ring — Trick-Taking Game",
+  "description": "Board game hợp tác lấy cảm hứng từ Chúa Nhẫn: Hội Đồng Nhẫn, hỗ trợ đấu với AI, hướng dẫn từng bước cho người mới, và tạo phòng chơi cùng bạn bè qua link chia sẻ.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,34 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Phòng chơi The Fellowship of the Ring: Trick-Taking Game.
+    // Mã phòng dạng RING-XXXXX; mỗi phòng tối đa 4 ghế.
+    match /rooms/{roomCode} {
+      allow get: if roomCode.matches('^[A-Z0-9\\-]{4,16}$');
+      allow list: if false;
+
+      allow create: if roomCode.matches('^[A-Z0-9\\-]{4,16}$')
+                    && request.resource.data.code == roomCode
+                    && request.resource.data.hostId is string
+                    && request.resource.data.status in ['LOBBY', 'IN_GAME']
+                    && request.resource.data.seats is list
+                    && request.resource.data.seats.size() == 4
+                    && request.resource.data.updatedAt is number;
+
+      allow update: if roomCode.matches('^[A-Z0-9\\-]{4,16}$')
+                    && request.resource.data.code == resource.data.code
+                    && request.resource.data.hostId == resource.data.hostId
+                    && request.resource.data.status in ['LOBBY', 'IN_GAME']
+                    && request.resource.data.seats is list
+                    && request.resource.data.seats.size() == 4
+                    && request.resource.data.updatedAt is number;
+
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

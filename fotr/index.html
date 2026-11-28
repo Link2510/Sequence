@@ -1,107 +1,26 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="The Lord of the Rings: The Fellowship of the Ring Trick-Taking Game — playable web build of the official rules, 18 chapters, bilingual, with AI companions. Fully local.">
-  <title>The Fellowship of the Ring — Trick-Taking Game</title>
-  <link rel="stylesheet" href="css/styles.css">
-</head>
-<body><a class="bg-home" href="https://boardgameace.web.app/" title="Về sảnh trò chơi" aria-label="Về sảnh trò chơi">← Sảnh trò chơi</a>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Fellowship of the Ring — Trick-Taking Game</title>
+    <meta name="description" content="Board game hợp tác lấy cảm hứng từ Chúa Nhẫn: Hội Đồng Nhẫn, hỗ trợ đấu với AI, hướng dẫn từng bước cho người mới, và tạo phòng chơi cùng bạn bè qua link chia sẻ." />
+    <meta property="og:title" content="The Fellowship of the Ring — Trick-Taking Game" />
+    <meta property="og:description" content="Board game hợp tác Chúa Nhẫn: đấu với AI, học luật từng bước và chơi trực tuyến cùng bạn bè." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="stylesheet" href="./fonts/fonts.css" />
+    <script type="module" crossorigin src="./assets/index-BD-T8uds.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-B_L-6MCq.css">
+  </head>
+  <body class="bg-[#0B150E] text-[#F5EEDB] antialiased selection:bg-[#C6932B]/30 selection:text-[#F5EEDB]"><a class="bg-home" href="https://boardgameace.web.app/" title="Về sảnh trò chơi" aria-label="Về sảnh trò chơi">← Sảnh trò chơi</a>
 <style>
 .bg-home{position:fixed;left:12px;bottom:12px;z-index:2147483647;display:inline-flex;align-items:center;padding:8px 12px;border-radius:999px;background:rgba(15,18,32,.82);color:#fff;text-decoration:none;font:600 13px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;border:1px solid rgba(255,255,255,.18);box-shadow:0 6px 18px rgba(0,0,0,.28);backdrop-filter:blur(6px)}
 .bg-home:hover,.bg-home:focus-visible{background:#242b55;color:#ffcc4d;outline:none}
 @media (prefers-color-scheme:light){.bg-home{background:rgba(255,255,255,.9);color:#1c2040;border-color:rgba(0,0,0,.15)}.bg-home:hover,.bg-home:focus-visible{color:#d98a00}}
 </style>
 
-  <div id="app">
-    <header id="topbar">
-      <div class="brand">
-        <span class="brand-mark">✦</span>
-        <div>
-          <div id="brandTitle">The Fellowship of the Ring</div>
-          <div id="brandSubtitle" class="brand-sub">Trick-Taking Game · Bản luật board game</div>
-        </div>
-      </div>
-      <div id="chapterDots" aria-label="18 chapters"></div>
-      <div class="top-actions">
-        <button id="langBtn" class="btn btn-ghost" type="button">EN</button>
-        <button id="tutorialBtn" class="btn btn-ghost" type="button">Hướng dẫn từng bước</button>
-        <button id="guideBtn" class="btn btn-ghost" type="button">Luật chơi</button>
-        <button id="homeBtn" class="btn btn-ghost" type="button">Về sảnh trò chơi</button>
-        <button id="soundBtn" class="btn btn-ghost" type="button">🔊</button>
-        <button id="resetBtn" class="btn btn-ghost" type="button">Đặt lại tiến trình</button>
-      </div>
-    </header>
-
-    <main id="main">
-      <section id="chapterBanner">
-        <div id="bannerArt" class="banner-art"></div>
-        <div class="banner-shade"></div>
-        <div class="banner-text">
-          <div id="chapterLabel" class="eyebrow"></div>
-          <h1 id="chapterTitle"></h1>
-          <p id="chapterStory"></p>
-          <div id="chapterTip" class="chapter-tip"></div>
-        </div>
-        <div class="banner-corner">✦</div>
-      </section>
-
-      <div id="playArea">
-        <section id="tableArea" class="panel">
-          <div id="tableHeader" class="panel-head">
-            <span id="trickLabel"></span>
-            <span id="turnLabel"></span>
-          </div>
-          <div id="tableInner">
-            <div class="side-stack">
-              <div class="mini-label" id="lostLabel">Lá bài bị rơi</div>
-              <div id="lostCard" class="lost-card"></div>
-              <div class="mini-label" id="ringLabel">Chất Nhẫn</div>
-              <div id="ringToken" class="ring-token">🔒</div>
-              <div id="threatBox" class="threat-box"></div>
-            </div>
-            <div id="playGrid">
-              <div class="play-slot" data-slot="0"></div>
-              <div class="play-slot" data-slot="1"></div>
-              <div class="play-slot" data-slot="2"></div>
-              <div class="play-slot" data-slot="3"></div>
-              <div id="trickResult" class="trick-result"></div>
-            </div>
-          </div>
-        </section>
-
-        <aside id="statusPanel" class="panel">
-          <div class="panel-head"><span id="statusLabel">Trạng thái</span><span class="gold">✦</span></div>
-          <div id="goalList" class="goal-list"></div>
-          <div class="log-head" id="logLabel">Nhật ký</div>
-          <div id="logPanel"><div id="logList"></div></div>
-        </aside>
-      </div>
-
-      <section id="handArea" class="panel">
-        <div class="hand-head">
-          <div>
-            <div id="handLabel" class="mini-label">Bài trên tay</div>
-            <div id="hintLine" class="hint-line"></div>
-          </div>
-          <button id="playButton" class="btn btn-primary" type="button">Đi lá này</button>
-        </div>
-        <div id="handCards"></div>
-      </section>
-    </main>
-  </div>
-
-  <div id="overlayRoot"></div>
-  <div id="coachRoot"></div>
-
-  <script src="js/engine.js"></script>
-  <script src="js/characters.js"></script>
-  <script src="js/chapters.js"></script>
-  <script src="js/i18n.js"></script>
-  <script src="js/firebase-config.js"></script>
-  <script src="js/net.js"></script>
-  <script src="js/room-list.js"></script>
-  <script src="js/game.js"></script>
-</body>
+    <div id="root"></div>
+  </body>
 </html>
+

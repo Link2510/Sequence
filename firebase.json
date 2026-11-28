@@ -10,6 +10,7 @@
         "**/.github/**",
         "**/.firebase/**",
         "**/node_modules/**",
+        "fotr/app/**",
         "README.md",
         "database.rules.json",
         "*.ps1",
@@ -52,5 +53,9 @@
   ],
   "database": {
     "rules": "database.rules.json"
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   }
 }
