@@ -17,7 +17,7 @@ Website tổ hợp board game tĩnh trên Firebase Hosting. Trang chủ là app 
 ```text
 .
 ├── index.html          # Trang chủ mới (React/Vite), 5 thẻ đều là link sang game riêng
-├── assets/             # Bundle + ảnh của trang chủ
+├── assets/             # Bundle + 6 ảnh JPG hashed của trang chủ (copy toàn bộ dist/assets/)
 ├── meono/index.html    # Trang riêng Mèo Nổ (dùng chung bundle với trang chủ)
 ├── src/assets/images/  # Ảnh không được bundle của trang chủ
 ├── sequence/index.html # Game Sequence (giữ nguyên mã nguồn cũ)
